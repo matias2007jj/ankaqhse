@@ -2,11 +2,16 @@ let activeCourseId = null;
 let selectedExamAnswers = {};
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (!window.courses || !Array.isArray(window.courses)) {
+        window.courses = [];
+    }
+
     renderMyCourses();
     renderCatalog();
     renderCertificates();
     populateExamSelect();
     updateStats();
+
     if (window.lucide) {
         lucide.createIcons();
     }
@@ -19,210 +24,293 @@ function switchTab(tabId) {
         btn.classList.add('boton-pestana-inactivo');
     });
 
-    document.getElementById(`view-${tabId}`).classList.remove('hidden');
+    const targetView = document.getElementById(`view-${tabId}`);
+    if (targetView) targetView.classList.remove('hidden');
+
     const activeBtn = document.getElementById(`tab-${tabId}`);
     if (activeBtn) {
         activeBtn.classList.add('boton-pestana-activo');
         activeBtn.classList.remove('boton-pestana-inactivo');
     }
 
-    if (tabId === 'exam-tab') {
-        updateExamTabState();
+    if (tabId === 'certificates') {
+        renderCertificates();
     }
 }
 
 function getCourseProgress(course) {
-    if (!course.lessons || course.lessons.length === 0) return 0;
-    const completed = course.lessons.filter(l => l.completed).length;
-    return Math.round((completed / course.lessons.length) * 100);
+    if (!course) return 0;
+    if (course.progreso !== undefined) return course.progreso;
+    if (course.pivot && course.pivot.progreso !== undefined) return course.pivot.progreso;
+
+    const lessons = course.lessons || course.lecciones || [];
+    if (lessons.length === 0) return 0;
+    const completed = lessons.filter(l => l.completed || l.completado).length;
+    return Math.round((completed / lessons.length) * 100);
 }
 
 function updateStats() {
-    const activeCount = window.courses.filter(c => c.enrolled && !c.examPassed).length;
-    const completedCount = window.courses.filter(c => c.examPassed).length;
+    const courses = window.courses || [];
+    
+    const activeCount = courses.filter(c => (c.enrolled || c.inscrito || c.pivot) && !c.examPassed).length;
+    const completedCount = courses.filter(c => c.examPassed || getCourseProgress(c) === 100).length;
 
-    document.getElementById('stat-active').innerText = activeCount;
-    document.getElementById('stat-completed').innerText = completedCount;
-    document.getElementById('stat-certs').innerText = completedCount;
+    const elActive = document.getElementById('stat-active');
+    const elCompleted = document.getElementById('stat-completed');
+    const elCerts = document.getElementById('stat-certs');
+
+    if (elActive) elActive.innerText = activeCount;
+    if (elCompleted) elCompleted.innerText = completedCount;
+    if (elCerts) elCerts.innerText = completedCount;
 }
 
+// ==========================================
+// RENDER: MIS CURSOS (TPL: #tpl-curso-card)
+// ==========================================
 function renderMyCourses() {
     const grid = document.getElementById('my-courses-grid');
-    const enrolledCourses = window.courses.filter(c => c.enrolled);
+    if (!grid) return;
 
+    grid.innerHTML = '';
+    const courses = window.courses || [];
+    const enrolledCourses = courses.filter(c => c.enrolled || c.inscrito || c.pivot);
+
+    // Estado Vacío
     if (enrolledCourses.length === 0) {
-        grid.innerHTML = `<p class="col-span-3 text-center text-neutral-400 py-10">No estás inscrito en ningún curso actualmente.</p>`;
+        renderEstadoVacio(grid, 'book-open', 'No tienes capacitaciones asignadas', 'Los cursos asignados por tu empresa aparecerán aquí.');
         return;
     }
 
-    grid.innerHTML = enrolledCourses.map(course => {
+    const tplCard = document.getElementById('tpl-curso-card');
+
+    enrolledCourses.forEach(course => {
+        const clone = tplCard.content.cloneNode(true);
         const progress = getCourseProgress(course);
         const is100 = progress === 100;
+        const totalModulos = (course.lessons || course.modulos || course.lecciones || []).length;
+        const titulo = course.title || course.titulo || 'Curso sin título';
+        const categoria = course.category || course.categoria || 'General';
+        const imagen = course.image || course.imagen || '/img/logo.png';
 
-        return `
-            <div class="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col">
-                <div class="h-40 overflow-hidden relative">
-                    <img src="${course.image}" alt="${course.title}" class="w-full h-full object-cover">
-                    <span class="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-semibold text-neutral-800 shadow-sm">
-                        ${course.category}
-                    </span>
-                </div>
-                <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
-                    <div>
-                        <h3 class="font-bold text-neutral-900 text-base leading-snug">${course.title}</h3>
-                        <p class="text-xs text-neutral-500 mt-1">${course.lessons.length} Módulos interactivos</p>
-                    </div>
-                    <div class="space-y-3">
-                        <div>
-                            <div class="flex justify-between text-xs font-medium mb-1">
-                                <span class="text-neutral-500">Progreso lectivo</span>
-                                <span class="text-orange-600 font-bold">${progress}%</span>
-                            </div>
-                            <div class="w-full bg-neutral-100 rounded-full h-2">
-                                <div class="bg-gradient-to-r from-red-600 to-orange-500 h-2 rounded-full transition-all duration-300" style="width: ${progress}%"></div>
-                            </div>
-                        </div>
-                        <div class="pt-2 flex items-center justify-between gap-2">
-                            <button onclick="openCourseModal(${course.id})" class="flex-1 px-4 py-2 border border-orange-500 text-orange-600 hover:bg-orange-50 rounded-xl text-sm font-semibold transition-all text-center">
-                                Ver Módulos
-                            </button>
-                            <button 
-                                onclick="${is100 ? `openExamModalForCourse(${course.id})` : "showToast('Completa los módulos al 100% para iniciar el examen', 'info')"}" 
-                                class="${is100 ? 'bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-md' : 'bg-neutral-100 text-neutral-400 cursor-not-allowed'} px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-1.5"
-                                ${!is100 ? 'disabled' : ''}>
-                                <i data-lucide="${is100 ? 'file-text' : 'lock'}" class="w-4 h-4"></i>
-                                <span>Prueba</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
+        clone.querySelector('.img-portada').src = imagen;
+        clone.querySelector('.img-portada').alt = titulo;
+        clone.querySelector('.badge-categoria').textContent = categoria;
+        clone.querySelector('.txt-titulo').textContent = titulo;
+        clone.querySelector('.txt-modulos').textContent = `${totalModulos} Módulos interactivos`;
+        clone.querySelector('.txt-progreso').textContent = `${progress}%`;
+        clone.querySelector('.bar-progreso').style.width = `${progress}%`;
 
-    lucide.createIcons();
+        // Eventos de Botones
+        clone.querySelector('.btn-modulos').onclick = () => openCourseModal(course.id);
+
+        const btnPrueba = clone.querySelector('.btn-prueba');
+        const iconoPrueba = clone.querySelector('.icono-prueba');
+
+        if (is100) {
+            btnPrueba.className = 'btn-prueba bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-md px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-1.5';
+            btnPrueba.onclick = () => openExamModalForCourse(course.id);
+            if (iconoPrueba) iconoPrueba.setAttribute('data-lucide', 'file-text');
+        } else {
+            btnPrueba.className = 'btn-prueba bg-neutral-100 text-neutral-400 cursor-not-allowed px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-1.5';
+            btnPrueba.onclick = () => showToast('Completa los módulos al 100% para iniciar el examen', 'info');
+        }
+
+        grid.appendChild(clone);
+    });
+
+    if (window.lucide) lucide.createIcons();
 }
 
+// ==========================================
+// RENDER: CATÁLOGO (TPL: #tpl-catalogo-card)
+// ==========================================
 function renderCatalog() {
     const grid = document.getElementById('catalog-grid');
-    grid.innerHTML = window.courses.map(course => `
-        <div class="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col">
-            <div class="h-40 overflow-hidden relative">
-                <img src="${course.image}" alt="${course.title}" class="w-full h-full object-cover">
-                <span class="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-semibold text-neutral-800 shadow-sm">
-                    ${course.category}
-                </span>
-            </div>
-            <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
-                <div>
-                    <h3 class="font-bold text-neutral-900 text-base">${course.title}</h3>
-                    <p class="text-xs text-neutral-500 mt-1">${course.lessons.length} Módulos lectivos</p>
-                </div>
-                ${course.enrolled ? `
-                    <div class="bg-orange-50 text-orange-700 p-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
-                        <i data-lucide="check-circle" class="w-4 h-4"></i> Ya estás inscrito
-                    </div>
-                ` : `
-                    <button onclick="enrollCourse(${course.id})" class="w-full py-2.5 bg-gradient-to-r from-red-600 to-orange-500 text-white font-semibold rounded-xl text-sm shadow-md hover:from-red-700 hover:to-orange-600 transition-all flex items-center justify-center gap-2">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Inscribirse Gratis
-                    </button>
-                `}
-            </div>
-        </div>
-    `).join('');
+    if (!grid) return;
 
-    lucide.createIcons();
-}
+    grid.innerHTML = '';
+    const courses = window.courses || [];
 
-function renderCertificates() {
-    const grid = document.getElementById('certificates-grid');
-    const passed = window.courses.filter(c => c.examPassed);
-
-    if (passed.length === 0) {
-        grid.innerHTML = `<p class="col-span-3 text-center text-neutral-400 py-10">Completa tus evaluaciones al 100% para obtener tu certificado.</p>`;
+    if (courses.length === 0) {
+        renderEstadoVacio(grid, 'layout-grid', 'No hay cursos disponibles', 'Actualmente no existen programas cargados en el catálogo.');
         return;
     }
 
-    grid.innerHTML = passed.map(c => `
-        <div class="bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm space-y-4 flex flex-col justify-between">
-            <div class="flex items-start gap-4">
-                <div class="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="award" class="w-6 h-6"></i>
-                </div>
-                <div>
-                    <span class="text-xs font-semibold text-neutral-400">Certificado Oficial</span>
-                    <h3 class="font-bold text-neutral-900 text-base leading-snug">${c.title}</h3>
-                    <p class="text-xs text-neutral-500 mt-1">Aprobado el ${c.examDate || new Date().toLocaleDateString('es-ES')}</p>
-                </div>
-            </div>
-            <button onclick="openCertificateModal('${c.title}')" class="w-full py-2 border border-neutral-300 text-neutral-700 hover:bg-neutral-50 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2">
-                <i data-lucide="eye" class="w-4 h-4"></i> Ver Certificado
-            </button>
-        </div>
-    `).join('');
+    const tplCard = document.getElementById('tpl-catalogo-card');
 
-    lucide.createIcons();
+    courses.forEach(course => {
+        const clone = tplCard.content.cloneNode(true);
+        const totalModulos = (course.lessons || course.modulos || course.lecciones || []).length;
+        const titulo = course.title || course.titulo || 'Curso sin título';
+        const categoria = course.category || course.categoria || 'General';
+        const imagen = course.image || course.imagen || '/img/logo.png';
+        const isInscrito = course.enrolled || course.inscrito || course.pivot;
+
+        clone.querySelector('.img-portada').src = imagen;
+        clone.querySelector('.img-portada').alt = titulo;
+        clone.querySelector('.badge-categoria').textContent = categoria;
+        clone.querySelector('.txt-titulo').textContent = titulo;
+        clone.querySelector('.txt-modulos').textContent = `${totalModulos} Módulos lectivos`;
+
+        const contenedorAccion = clone.querySelector('.contenedor-accion');
+
+        if (isInscrito) {
+            const divInscrito = document.createElement('div');
+            divInscrito.className = 'bg-orange-50 text-orange-700 p-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2';
+            divInscrito.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> Ya estás inscrito';
+            contenedorAccion.appendChild(divInscrito);
+        } else {
+            const btnInscribirse = document.createElement('button');
+            btnInscribirse.className = 'w-full py-2.5 bg-gradient-to-r from-red-600 to-orange-500 text-white font-semibold rounded-xl text-sm shadow-md hover:from-red-700 hover:to-orange-600 transition-all flex items-center justify-center gap-2';
+            btnInscribirse.onclick = () => enrollCourse(course.id);
+            btnInscribirse.innerHTML = '<i data-lucide="plus-circle" class="w-4 h-4"></i> Inscribirse Gratis';
+            contenedorAccion.appendChild(btnInscribirse);
+        }
+
+        grid.appendChild(clone);
+    });
+
+    if (window.lucide) lucide.createIcons();
+}
+
+// ===============================================
+// RENDER: CERTIFICADOS (TPL: #tpl-certificado-card)
+// ===============================================
+function renderCertificates() {
+    const grid = document.getElementById('certificates-grid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+    const courses = window.courses || [];
+    const passed = courses.filter(c => c.examPassed || getCourseProgress(c) === 100);
+
+    if (passed.length === 0) {
+        renderEstadoVacio(grid, 'award', 'Sin certificados emitidos', 'Completa tus evaluaciones al 100% para obtener tu constancia.');
+        return;
+    }
+
+    const tplCard = document.getElementById('tpl-certificado-card');
+
+    passed.forEach(c => {
+        const clone = tplCard.content.cloneNode(true);
+        const titulo = c.title || c.titulo || 'Curso';
+        const fecha = c.examDate || new Date().toLocaleDateString('es-ES');
+
+        clone.querySelector('.txt-titulo').textContent = titulo;
+        clone.querySelector('.txt-fecha').textContent = `Aprobado el ${fecha}`;
+        clone.querySelector('.btn-ver-certificado').onclick = () => openCertificateModal(titulo);
+
+        grid.appendChild(clone);
+    });
+
+    if (window.lucide) lucide.createIcons();
+}
+
+// HELPER: RENDERIZAR ESTADO VACÍO MEDIANTE PLANTILLA
+function renderEstadoVacio(contenedor, icono, titulo, subtitulo) {
+    const tplVacio = document.getElementById('tpl-vacio');
+    if (!tplVacio) return;
+
+    const clone = tplVacio.content.cloneNode(true);
+    const elIcono = clone.querySelector('.icono-vacio');
+    if (elIcono) elIcono.setAttribute('data-lucide', icono);
+
+    clone.querySelector('.titulo-vacio').textContent = titulo;
+    clone.querySelector('.subtitulo-vacio').textContent = subtitulo;
+
+    contenedor.appendChild(clone);
+    if (window.lucide) lucide.createIcons();
 }
 
 function enrollCourse(id) {
-    const course = window.courses.find(c => c.id === id);
+    const course = (window.courses || []).find(c => c.id === id);
     if (course) {
         course.enrolled = true;
+        course.inscrito = true;
         renderMyCourses();
         renderCatalog();
         populateExamSelect();
         updateStats();
-        showToast(`Te has inscrito exitosamente en "${course.title}"`, 'success');
+        showToast(`Te has inscrito exitosamente en "${course.title || course.titulo}"`, 'success');
     }
 }
 
 function openCourseModal(id) {
     activeCourseId = id;
-    const course = window.courses.find(c => c.id === id);
+    const course = (window.courses || []).find(c => c.id === id);
     if (!course) return;
 
-    document.getElementById('modal-title').innerText = course.title;
-    document.getElementById('modal-category').innerText = course.category;
+    const elTitle = document.getElementById('modal-title');
+    const elCat = document.getElementById('modal-category');
+
+    if (elTitle) elTitle.innerText = course.title || course.titulo || 'Curso';
+    if (elCat) elCat.innerText = course.category || course.categoria || 'General';
 
     renderModalLessons(course);
     updateModalProgress(course);
 
-    document.getElementById('course-modal').classList.remove('hidden');
+    const modal = document.getElementById('course-modal');
+    if (modal) modal.classList.remove('hidden');
 }
 
 function renderModalLessons(course) {
     const list = document.getElementById('modal-lessons-list');
-    list.innerHTML = course.lessons.map(lesson => `
-        <div class="flex items-center justify-between p-3.5 rounded-xl border ${lesson.completed ? 'bg-orange-50/50 border-orange-200' : 'bg-white border-neutral-200'} transition-all">
-            <div class="flex items-center gap-3">
-                <input 
-                    type="checkbox" 
-                    ${lesson.completed ? 'checked' : ''} 
-                    onchange="toggleLesson(${course.id}, ${lesson.id})"
-                    class="w-5 h-5 accent-orange-600 rounded cursor-pointer"
-                >
-                <span class="text-sm font-medium ${lesson.completed ? 'line-through text-neutral-400' : 'text-neutral-800'}">
-                    ${lesson.title}
-                </span>
-            </div>
-            <span class="text-xs ${lesson.completed ? 'text-orange-600 font-semibold' : 'text-neutral-400'}">
-                ${lesson.completed ? 'Completado' : 'Pendiente'}
-            </span>
-        </div>
-    `).join('');
+    if (!list) return;
 
-    if (course.lessons.length > 0) {
-        document.getElementById('modal-active-lesson-title').innerText = course.lessons[0].title;
+    list.innerHTML = '';
+    const lessons = course.lessons || course.modulos || course.lecciones || [];
+
+    if (lessons.length === 0) {
+        list.innerHTML = `<p class="text-xs text-neutral-400 py-4 text-center">Este curso no contiene módulos registrados actualmente.</p>`;
+        return;
+    }
+
+    lessons.forEach(lesson => {
+        const isComplete = lesson.completed || lesson.completado;
+        const item = document.createElement('div');
+        item.className = `flex items-center justify-between p-3.5 rounded-xl border ${isComplete ? 'bg-orange-50/50 border-orange-200' : 'bg-white border-neutral-200'} transition-all`;
+
+        const leftDiv = document.createElement('div');
+        leftDiv.className = 'flex items-center gap-3';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = isComplete;
+        checkbox.className = 'w-5 h-5 accent-orange-600 rounded cursor-pointer';
+        checkbox.onchange = () => toggleLesson(course.id, lesson.id);
+
+        const textSpan = document.createElement('span');
+        textSpan.className = `text-sm font-medium ${isComplete ? 'line-through text-neutral-400' : 'text-neutral-800'}`;
+        textSpan.textContent = lesson.title || lesson.titulo || 'Módulo';
+
+        leftDiv.appendChild(checkbox);
+        leftDiv.appendChild(textSpan);
+
+        const statusSpan = document.createElement('span');
+        statusSpan.className = `text-xs ${isComplete ? 'text-orange-600 font-semibold' : 'text-neutral-400'}`;
+        statusSpan.textContent = isComplete ? 'Completado' : 'Pendiente';
+
+        item.appendChild(leftDiv);
+        item.appendChild(statusSpan);
+        list.appendChild(item);
+    });
+
+    const elActiveTitle = document.getElementById('modal-active-lesson-title');
+    if (elActiveTitle && lessons.length > 0) {
+        elActiveTitle.innerText = lessons[0].title || lessons[0].titulo || 'Módulo 1';
     }
 }
 
 function toggleLesson(courseId, lessonId) {
-    const course = window.courses.find(c => c.id === courseId);
+    const course = (window.courses || []).find(c => c.id === courseId);
     if (!course) return;
 
-    const lesson = course.lessons.find(l => l.id === lessonId);
+    const lessons = course.lessons || course.modulos || course.lecciones || [];
+    const lesson = lessons.find(l => l.id === lessonId);
+    
     if (lesson) {
         lesson.completed = !lesson.completed;
+        lesson.completado = lesson.completed;
         renderModalLessons(course);
         updateModalProgress(course);
         renderMyCourses();
@@ -233,141 +321,130 @@ function toggleLesson(courseId, lessonId) {
 function updateModalProgress(course) {
     const progress = getCourseProgress(course);
     
-    document.getElementById('modal-progress-text').innerText = `${progress}% Completado`;
-    document.getElementById('modal-progress-bar').style.width = `${progress}%`;
+    const elText = document.getElementById('modal-progress-text');
+    const elBar = document.getElementById('modal-progress-bar');
+
+    if (elText) elText.innerText = `${progress}% Completado`;
+    if (elBar) elBar.style.width = `${progress}%`;
 
     const btnExam = document.getElementById('modal-btn-start-exam');
     const iconExam = document.getElementById('modal-btn-exam-icon');
     const textExam = document.getElementById('modal-btn-exam-text');
 
-    if (progress === 100) {
-        btnExam.disabled = false;
-        iconExam.setAttribute('data-lucide', 'file-text');
-        textExam.innerText = 'Comenzar prueba';
-    } else {
-        btnExam.disabled = true;
-        iconExam.setAttribute('data-lucide', 'lock');
-        textExam.innerText = 'Comenzar prueba';
+    if (btnExam) {
+        if (progress === 100) {
+            btnExam.disabled = false;
+            if (iconExam) iconExam.setAttribute('data-lucide', 'file-text');
+            if (textExam) textExam.innerText = 'Comenzar prueba';
+        } else {
+            btnExam.disabled = true;
+            if (iconExam) iconExam.setAttribute('data-lucide', 'lock');
+            if (textExam) textExam.innerText = 'Comenzar prueba';
+        }
     }
-    lucide.createIcons();
-}
-
-function startCourseExamFromModal() {
-    if (!activeCourseId) return;
-    closeModal('course-modal');
-    openExamModalForCourse(activeCourseId);
+    if (window.lucide) lucide.createIcons();
 }
 
 function populateExamSelect() {
     const select = document.getElementById('exam-course-select');
-    const enrolled = window.courses.filter(c => c.enrolled);
+    if (!select) return;
 
+    const enrolled = (window.courses || []).filter(c => c.enrolled || c.inscrito || c.pivot);
+
+    select.innerHTML = '';
     if (enrolled.length === 0) {
-        select.innerHTML = `<option value="">No estás inscrito en ningún curso</option>`;
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No estás inscrito en ningún curso';
+        select.appendChild(option);
         return;
     }
 
-    select.innerHTML = enrolled.map(c => `
-        <option value="${c.id}">${c.title} (${getCourseProgress(c)}% completado)</option>
-    `).join('');
-}
-
-function updateExamTabState() {
-    const select = document.getElementById('exam-course-select');
-    const box = document.getElementById('exam-status-box');
-    const courseId = parseInt(select.value);
-
-    if (!courseId) {
-        box.innerHTML = `<p class="text-center text-neutral-400 text-sm">Debes estar inscrito en un curso para evaluar tus conocimientos.</p>`;
-        return;
-    }
-
-    const course = window.courses.find(c => c.id === courseId);
-    const progress = getCourseProgress(course);
-
-    if (course.examPassed) {
-        box.innerHTML = `
-            <div class="text-center space-y-3">
-                <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
-                    <i data-lucide="check-circle-2" class="w-6 h-6"></i>
-                </div>
-                <h3 class="font-bold text-neutral-800 text-lg">¡Evaluación Aprobada!</h3>
-                <p class="text-sm text-neutral-500">Ya has superado este examen satisfactoriamente y tu certificado está disponible.</p>
-                <button onclick="openCertificateModal('${course.title}')" class="px-5 py-2.5 bg-neutral-900 text-white font-semibold rounded-xl text-sm hover:bg-neutral-800 transition-all">
-                    Ver Certificado
-                </button>
-            </div>
-        `;
-    } else if (progress < 100) {
-        box.innerHTML = `
-            <div class="text-center space-y-3">
-                <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto">
-                    <i data-lucide="lock" class="w-6 h-6"></i>
-                </div>
-                <h3 class="font-bold text-neutral-800 text-base">Prueba Bloqueada (${progress}%)</h3>
-                <p class="text-xs text-neutral-500 max-w-md mx-auto">Debes completar el 100% de los módulos lectivos del curso antes de habilitar el examen.</p>
-                <button disabled class="mt-2 px-6 py-2.5 bg-neutral-200 text-neutral-400 rounded-xl text-sm font-semibold cursor-not-allowed flex items-center justify-center gap-2 mx-auto">
-                    <i data-lucide="lock" class="w-4 h-4"></i> Comenzar prueba
-                </button>
-            </div>
-        `;
-    } else {
-        box.innerHTML = `
-            <div class="text-center space-y-3">
-                <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto">
-                    <i data-lucide="unlock" class="w-6 h-6"></i>
-                </div>
-                <h3 class="font-bold text-neutral-800 text-base">¡Módulos Completados al 100%!</h3>
-                <p class="text-xs text-neutral-500 max-w-md mx-auto">Estás listo para rendir la prueba oficial del curso y obtener tu certificado.</p>
-                <button onclick="openExamModalForCourse(${course.id})" class="mt-2 px-6 py-2.5 bg-gradient-to-r from-red-600 to-orange-500 text-white rounded-xl text-sm font-semibold shadow-md hover:from-red-700 hover:to-orange-600 transition-all flex items-center justify-center gap-2 mx-auto">
-                    <i data-lucide="file-text" class="w-4 h-4"></i> Comenzar prueba
-                </button>
-            </div>
-        `;
-    }
-
-    lucide.createIcons();
+    enrolled.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c.id;
+        option.textContent = `${c.title || c.titulo} (${getCourseProgress(c)}% completado)`;
+        select.appendChild(option);
+    });
 }
 
 function openExamModalForCourse(courseId) {
     activeCourseId = courseId;
-    const course = window.courses.find(c => c.id === courseId);
+    const course = (window.courses || []).find(c => c.id === courseId);
     if (!course) return;
 
-    document.getElementById('exam-modal-title').innerText = `Evaluación: ${course.title}`;
+    const elTitle = document.getElementById('exam-modal-title');
+    if (elTitle) elTitle.innerText = `Evaluación: ${course.title || course.titulo}`;
+    
     selectedExamAnswers = {};
-
     const container = document.getElementById('exam-questions-container');
-    container.innerHTML = course.examQuestions.map((q, qIndex) => `
-        <div class="space-y-3 border-b border-neutral-100 pb-4">
-            <p class="font-semibold text-neutral-800 text-sm">${qIndex + 1}. ${q.q}</p>
-            <div class="space-y-2">
-                ${q.options.map((opt, oIndex) => `
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-orange-50/50 cursor-pointer text-sm text-neutral-700 transition-all">
-                        <input type="radio" name="q_${qIndex}" value="${oIndex}" onchange="selectedExamAnswers[${qIndex}] =${oIndex}" class="accent-orange-600">
-                        <span>${opt}</span>
-                    </label>
-                `).join('')}
-            </div>
-        </div>
-    `).join('');
+    if (!container) return;
 
-    document.getElementById('exam-modal').classList.remove('hidden');
-    lucide.createIcons();
+    container.innerHTML = '';
+    const questions = course.examQuestions || course.preguntas || [];
+
+    if (questions.length === 0) {
+        container.innerHTML = `<p class="text-xs text-neutral-400 py-6 text-center">Este examen no cuenta con preguntas configuradas aún.</p>`;
+    } else {
+        questions.forEach((q, qIndex) => {
+            const qBox = document.createElement('div');
+            qBox.className = 'space-y-3 border-b border-neutral-100 pb-4';
+
+            const pText = document.createElement('p');
+            pText.className = 'font-semibold text-neutral-800 text-sm';
+            pText.textContent = `${qIndex + 1}. ${q.q || q.pregunta}`;
+
+            const optsDiv = document.createElement('div');
+            optsDiv.className = 'space-y-2';
+
+            (q.options || q.opciones || []).forEach((opt, oIndex) => {
+                const label = document.createElement('label');
+                label.className = 'flex items-center gap-3 p-3 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-orange-50/50 cursor-pointer text-sm text-neutral-700 transition-all';
+
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = `q_${qIndex}`;
+                radio.value = oIndex;
+                radio.className = 'accent-orange-600';
+                radio.onchange = () => selectedExamAnswers[qIndex] = oIndex;
+
+                const optSpan = document.createElement('span');
+                optSpan.textContent = opt;
+
+                label.appendChild(radio);
+                label.appendChild(optSpan);
+                optsDiv.appendChild(label);
+            });
+
+            qBox.appendChild(pText);
+            qBox.appendChild(optsDiv);
+            container.appendChild(qBox);
+        });
+    }
+
+    const modal = document.getElementById('exam-modal');
+    if (modal) modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
 }
 
 function submitExam() {
-    const course = window.courses.find(c => c.id === activeCourseId);
+    const course = (window.courses || []).find(c => c.id === activeCourseId);
     if (!course) return;
 
+    const questions = course.examQuestions || course.preguntas || [];
+    if (questions.length === 0) {
+        showToast("No hay preguntas para calificar en este examen.", 'error');
+        return;
+    }
+
     let correctCount = 0;
-    course.examQuestions.forEach((q, index) => {
-        if (selectedExamAnswers[index] === q.correct) {
+    questions.forEach((q, index) => {
+        if (selectedExamAnswers[index] === (q.correct !== undefined ? q.correct : q.respuesta_correcta)) {
             correctCount++;
         }
     });
 
-    const score = Math.round((correctCount / course.examQuestions.length) * 100);
+    const score = Math.round((correctCount / questions.length) * 100);
 
     if (score >= 80) {
         course.examPassed = true;
@@ -378,26 +455,31 @@ function submitExam() {
         updateStats();
         populateExamSelect();
         showToast(`¡Felicidades! Aprobaste con ${score}%. Tu certificado ha sido generado.`, 'success');
-        openCertificateModal(course.title);
+        openCertificateModal(course.title || course.titulo);
     } else {
         showToast(`Obtuviste ${score}%. Necesitas mínimo 80% para aprobar. Inténtalo nuevamente.`, 'error');
     }
 }
 
 function openCertificateModal(title) {
-    document.getElementById('cert-modal-course-name').innerText = title;
-    document.getElementById('certificate-modal').classList.remove('hidden');
+    const elName = document.getElementById('cert-modal-course-name');
+    if (elName) elName.innerText = title;
+
+    const modal = document.getElementById('certificate-modal');
+    if (modal) modal.classList.remove('hidden');
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).classList.add('hidden');
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.add('hidden');
 }
 
 function showToast(msg, type = 'info') {
     const toast = document.getElementById('toast');
     const text = document.getElementById('toast-message');
-    text.innerText = msg;
+    if (!toast || !text) return;
 
+    text.innerText = msg;
     toast.classList.remove('translate-y-[-100px]', 'opacity-0');
     toast.classList.add('translate-y-0', 'opacity-100');
 
@@ -408,35 +490,59 @@ function showToast(msg, type = 'info') {
 }
 
 function filterCatalog() {
-    const query = document.getElementById('catalog-search').value.toLowerCase();
-    const filtered = window.courses.filter(c => c.title.toLowerCase().includes(query) || c.category.toLowerCase().includes(query));
+    const input = document.getElementById('catalog-search');
+    if (!input) return;
+
+    const query = input.value.toLowerCase();
+    const courses = window.courses || [];
+    const filtered = courses.filter(c => {
+        const t = (c.title || c.titulo || '').toLowerCase();
+        const cat = (c.category || c.categoria || '').toLowerCase();
+        return t.includes(query) || cat.includes(query);
+    });
     
     const grid = document.getElementById('catalog-grid');
-    grid.innerHTML = filtered.map(course => `
-        <div class="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col">
-            <div class="h-40 overflow-hidden relative">
-                <img src="${course.image}" alt="${course.title}" class="w-full h-full object-cover">
-                <span class="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-semibold text-neutral-800 shadow-sm">
-                    ${course.category}
-                </span>
-            </div>
-            <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
-                <div>
-                    <h3 class="font-bold text-neutral-900 text-base">${course.title}</h3>
-                    <p class="text-xs text-neutral-500 mt-1">${course.lessons.length} Módulos lectivos</p>
-                </div>
-                ${course.enrolled ? `
-                    <div class="bg-orange-50 text-orange-700 p-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
-                        <i data-lucide="check-circle" class="w-4 h-4"></i> Ya estás inscrito
-                    </div>
-                ` : `
-                    <button onclick="enrollCourse(${course.id})" class="w-full py-2.5 bg-gradient-to-r from-red-600 to-orange-500 text-white font-semibold rounded-xl text-sm shadow-md hover:from-red-700 hover:to-orange-600 transition-all flex items-center justify-center gap-2">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Inscribirse Gratis
-                    </button>
-                `}
-            </div>
-        </div>
-    `).join('');
+    if (!grid) return;
 
-    lucide.createIcons();
+    grid.innerHTML = '';
+    if (filtered.length === 0) {
+        renderEstadoVacio(grid, 'search-x', 'Sin coincidencias', 'No se encontraron cursos coincidentes.');
+        return;
+    }
+
+    const tplCard = document.getElementById('tpl-catalogo-card');
+
+    filtered.forEach(course => {
+        const clone = tplCard.content.cloneNode(true);
+        const totalModulos = (course.lessons || course.modulos || course.lecciones || []).length;
+        const titulo = course.title || course.titulo || 'Curso sin título';
+        const categoria = course.category || course.categoria || 'General';
+        const imagen = course.image || course.imagen || '/img/logo.png';
+        const isInscrito = course.enrolled || course.inscrito || course.pivot;
+
+        clone.querySelector('.img-portada').src = imagen;
+        clone.querySelector('.img-portada').alt = titulo;
+        clone.querySelector('.badge-categoria').textContent = categoria;
+        clone.querySelector('.txt-titulo').textContent = titulo;
+        clone.querySelector('.txt-modulos').textContent = `${totalModulos} Módulos lectivos`;
+
+        const contenedorAccion = clone.querySelector('.contenedor-accion');
+
+        if (isInscrito) {
+            const divInscrito = document.createElement('div');
+            divInscrito.className = 'bg-orange-50 text-orange-700 p-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2';
+            divInscrito.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> Ya estás inscrito';
+            contenedorAccion.appendChild(divInscrito);
+        } else {
+            const btnInscribirse = document.createElement('button');
+            btnInscribirse.className = 'w-full py-2.5 bg-gradient-to-r from-red-600 to-orange-500 text-white font-semibold rounded-xl text-sm shadow-md hover:from-red-700 hover:to-orange-600 transition-all flex items-center justify-center gap-2';
+            btnInscribirse.onclick = () => enrollCourse(course.id);
+            btnInscribirse.innerHTML = '<i data-lucide="plus-circle" class="w-4 h-4"></i> Inscribirse Gratis';
+            contenedorAccion.appendChild(btnInscribirse);
+        }
+
+        grid.appendChild(clone);
+    });
+
+    if (window.lucide) lucide.createIcons();
 }

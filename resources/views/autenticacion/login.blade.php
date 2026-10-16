@@ -19,12 +19,12 @@
         <!-- ============ LADO IZQUIERDO: FORMULARIO ============ -->
         <section class="panel-formulario">
             <div class="marca">
-                <img src=" {{ asset('img/logo.png') }}" alt="ANKA ACADEMY" class="marca-logo">
+                <img src="{{ asset('img/logo.png') }}" alt="ANKA ACADEMY" class="marca-logo">
                 <span class="marca-nombre">ANKA<b>ACADEMY</b></span>
             </div>
 
             <h1 class="titulo-login">Bienvenido a ANKA ACADEMY</h1>
-            <p class="subtitulo-login"></p>
+            <p class="subtitulo-login">Ingresa tus credenciales para acceder a tus capacitaciones</p>
 
             @if ($errors->any())
                 <div class="alerta-error" role="alert">
@@ -41,11 +41,11 @@
                 @csrf
 
                 <div class="campo">
-                    <label for="email">Usuario</label>
+                    <label for="email">Correo Electrónico</label>
                     <div class="campo-caja">
                         <i data-lucide="mail" class="campo-icono"></i>
                         <input type="email" name="email" id="email" value="{{ old('email') }}" required
-                               autocomplete="email" placeholder="">
+                               autocomplete="email" placeholder="ejemplo@anka.com">
                     </div>
                 </div>
 
@@ -54,7 +54,7 @@
                     <div class="campo-caja">
                         <i data-lucide="lock" class="campo-icono"></i>
                         <input type="password" name="password" id="password" required
-                               autocomplete="current-password" placeholder="">
+                               autocomplete="current-password" placeholder="••••••••">
                         <button type="button" class="ver-clave" id="ver-clave" aria-label="Mostrar contraseña">
                             <i data-lucide="eye" id="icono-ver"></i>
                             <i data-lucide="eye-off" id="icono-ocultar" style="display:none"></i>
@@ -67,7 +67,6 @@
                 </button>
             </form>
 
-        
         </section>
 
         <!-- ============ LADO DERECHO: ILUSTRACIÓN ============ -->
@@ -147,17 +146,18 @@
 <script>
     lucide.createIcons();
 
-    // Mostrar u ocultar la contraseña
     const clave = document.getElementById('password');
     const boton = document.getElementById('ver-clave');
-    boton.addEventListener('click', () => {
-        const visible = clave.type === 'text';
-        clave.type = visible ? 'password' : 'text';
-        document.getElementById('icono-ver').style.display = visible ? '' : 'none';
-        document.getElementById('icono-ocultar').style.display = visible ? 'none' : '';
-        boton.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
-    });
+    
+    if (boton && clave) {
+        boton.addEventListener('click', () => {
+            const visible = clave.type === 'text';
+            clave.type = visible ? 'password' : 'text';
+            document.getElementById('icono-ver').style.display = visible ? '' : 'none';
+            document.getElementById('icono-ocultar').style.display = visible ? 'none' : '';
+            boton.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+        });
+    }
 </script>
 </body>
 </html>
-

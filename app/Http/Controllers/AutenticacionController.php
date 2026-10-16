@@ -10,7 +10,14 @@ class AutenticacionController extends Controller
     public function mostrarLogin()
     {
         if (Auth::check()) {
-            return redirect()->route('capacitaciones.inicio');
+            $user = Auth::user();
+            $rol = strtolower(trim($user->role ?? ''));
+
+            if (in_array($rol, ['operador', 'admin', 'administrador'])) {
+                return redirect()->route('administrador.panel');
+            }
+
+            return redirect()->route('inicio');
         }
 
         return view('autenticacion.login');
@@ -29,7 +36,16 @@ class AutenticacionController extends Controller
 
         if (Auth::attempt($credenciales, $request->boolean('remember'))) {
             $request->session()->regenerate();
-            return redirect()->intended('/inicio');
+
+            $user = Auth::user();
+            $rol = strtolower(trim($user->role ?? ''));
+
+            // Redirección forzada según el rol hacia la ruta del panel de control
+            if (in_array($rol, ['operador', 'admin', 'administrador'])) {
+                return redirect()->route('administrador.panel');
+            }
+
+            return redirect()->route('inicio');
         }
 
         return back()->withErrors([
