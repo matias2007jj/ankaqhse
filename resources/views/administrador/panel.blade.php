@@ -127,7 +127,6 @@
                         </thead>
                         <tbody class="divide-y divide-neutral-100">
                             @forelse($empleados ?? [] as $empleado)
-                                {{-- Ocultar silenciosamente cualquier usuario operador/admin en la vista por redundancia --}}
                                 @if(in_array(strtolower(trim($empleado->role ?? '')), ['operador', 'admin', 'administrador']))
                                     @continue
                                 @endif
@@ -182,20 +181,56 @@
 
         <!-- TAB 3: GESTIÓN DE CURSOS -->
         <section id="gestion-cursos" class="tab-pane-admin space-y-4 hidden">
+            
+            <!-- BOTÓN CREAR CURSO (EXCLUSIVO OPERADOR) -->
+            @if(strtolower(trim(Auth::user()->role ?? '')) === 'operador')
+            <div class="flex justify-end">
+                <button type="button" onclick="abrirModalCrearCurso()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Crear Nuevo Curso
+                </button>
+            </div>
+            @endif
+
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 @forelse($cursos ?? [] as $curso)
-                <div class="bg-white p-5 rounded-2xl border border-neutral-200 shadow-sm flex flex-col justify-between space-y-4">
-                    <div class="space-y-2">
-                        <div class="flex justify-between items-center">
-                            <span class="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-0.5 rounded-full">{{ $curso->categoria ?? 'General' }}</span>
-                            <span class="text-xs font-semibold text-green-600">Publicado</span>
+                <div class="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col justify-between">
+                    <div>
+                        {{-- Imagen del Curso --}}
+                        @if(!empty($curso->imagen))
+                            <img src="{{ asset($curso->imagen) }}" alt="{{ $curso->titulo ?? $curso->nombre }}" class="w-full h-36 object-cover border-b border-neutral-100">
+                        @else
+                            <div class="w-full h-36 bg-orange-50/60 border-b border-neutral-100 flex items-center justify-center text-orange-400">
+                                <i data-lucide="book-open" class="w-10 h-10"></i>
+                            </div>
+                        @endif
+
+                        <div class="p-5 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-0.5 rounded-full">{{ $curso->categoria ?? 'General' }}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-semibold text-green-600">Publicado</span>
+                                    
+                                    {{-- Botón de Editar visible para roles autorizados del panel --}}
+                                    @if(in_array(strtolower(trim(Auth::user()->role ?? '')), ['operador', 'admin', 'administrador']))
+                                    <button type="button" 
+                                        onclick="abrirModalEditarCurso({{ json_encode($curso) }})"
+                                        class="px-2 py-1 bg-neutral-100 hover:bg-orange-100 text-neutral-600 hover:text-orange-700 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                                        title="Editar Curso">
+                                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Editar
+                                    </button>
+                                    @endif
+                                </div>
+                            </div>
+                            <h3 class="font-bold text-neutral-800 text-base leading-snug">{{ $curso->titulo ?? $curso->nombre }}</h3>
+                            <p class="text-xs text-neutral-400">{{ $curso->modulos_count ?? 0 }} Módulos • {{ $curso->usuarios_count ?? 0 }} Colaboradores inscritos</p>
                         </div>
-                        <h3 class="font-bold text-neutral-800 text-base leading-snug">{{ $curso->titulo ?? $curso->nombre }}</h3>
-                        <p class="text-xs text-neutral-400">{{ $curso->modulos_count ?? 0 }} Módulos • {{ $curso->usuarios_count ?? 0 }} Colaboradores inscritos</p>
                     </div>
-                    <button type="button" class="w-full py-2 bg-neutral-900 text-white text-xs font-semibold rounded-xl hover:bg-neutral-800 transition-all cursor-pointer">
-                        Gestionar Examen
-                    </button>
+
+                    <div class="p-5 pt-0">
+                        <button type="button" class="w-full py-2 bg-neutral-900 text-white text-xs font-semibold rounded-xl hover:bg-neutral-800 transition-all cursor-pointer">
+                            Gestionar Examen
+                        </button>
+                    </div>
                 </div>
                 @empty
                 <div class="col-span-full py-12 text-center bg-white rounded-2xl border border-neutral-200">
@@ -210,8 +245,100 @@
     </main>
 </div>
 
-<!-- MODAL EN PARCIAL SEPARADO -->
+<!-- MODAL ASIGNAR CURSO -->
 @include('administrador.modales.asignar-curso')
+
+<!-- MODAL CREAR CURSO (EXCLUSIVO OPERADOR) -->
+@if(strtolower(trim(Auth::user()->role ?? '')) === 'operador')
+<div id="modal-crear-curso" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-lg w-full p-6 shadow-xl space-y-5">
+        <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+            <h3 class="font-bold text-lg text-neutral-800 flex items-center gap-2">
+                <i data-lucide="book-plus" class="text-orange-600 w-5 h-5"></i> Crear Nuevo Curso
+            </h3>
+            <button type="button" onclick="cerrarModalCrearCurso()" class="text-neutral-400 hover:text-neutral-700 font-bold text-lg cursor-pointer">✕</button>
+        </div>
+
+        <form action="{{ route('administrador.cursos.guardar') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+            @csrf
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Título del Curso</label>
+                <input type="text" name="titulo" required placeholder="Ej: Seguridad y Salud en el Trabajo" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Categoría</label>
+                <input type="text" name="categoria" required placeholder="Ej: Seguridad, Calidad, RRHH" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Imagen de Portada</label>
+                <input type="file" name="imagen" accept="image/*" class="w-full text-xs text-neutral-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer border border-neutral-200 rounded-xl p-1">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Descripción</label>
+                <textarea name="descripcion" rows="3" placeholder="Breve resumen del contenido del curso..." class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="cerrarModalCrearCurso()" class="px-4 py-2 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold hover:bg-neutral-50 transition-all cursor-pointer">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer">
+                    Guardar Curso
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
+
+<!-- MODAL EDITAR CURSO (DISPONIBLE EN EL DOM) -->
+<div id="modal-editar-curso" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-lg w-full p-6 shadow-xl space-y-5">
+        <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+            <h3 class="font-bold text-lg text-neutral-800 flex items-center gap-2">
+                <i data-lucide="edit-3" class="text-orange-600 w-5 h-5"></i> Editar Curso
+            </h3>
+            <button type="button" onclick="cerrarModalEditarCurso()" class="text-neutral-400 hover:text-neutral-700 font-bold text-lg cursor-pointer">✕</button>
+        </div>
+
+        <form action="{{ route('administrador.cursos.actualizar') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+            @csrf
+            <input type="hidden" name="curso_id" id="edit-curso-id">
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Título del Curso</label>
+                <input type="text" name="titulo" id="edit-curso-titulo" required class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Categoría</label>
+                <input type="text" name="categoria" id="edit-curso-categoria" required class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Cambiar Imagen de Portada (Opcional)</label>
+                <input type="file" name="imagen" accept="image/*" class="w-full text-xs text-neutral-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer border border-neutral-200 rounded-xl p-1">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Descripción</label>
+                <textarea name="descripcion" id="edit-curso-descripcion" rows="3" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="cerrarModalEditarCurso()" class="px-4 py-2 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold hover:bg-neutral-50 transition-all cursor-pointer">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer">
+                    Actualizar Curso
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 @endsection
 
@@ -257,7 +384,7 @@
         if (inputName) inputName.value = userName;
 
         if (selectCurso) {
-            selectCurso.value = ""; // Resetear selección
+            selectCurso.value = "";
 
             var options = selectCurso.querySelectorAll('option');
             options.forEach(function(option) {
@@ -283,11 +410,38 @@
         if (modal) modal.classList.add('hidden');
     };
 
-    // Auto-mantener la pestaña activa tras enviar un formulario o recargar
+    window.abrirModalCrearCurso = function() {
+        var modal = document.getElementById('modal-crear-curso');
+        if (modal) modal.classList.remove('hidden');
+    };
+
+    window.cerrarModalCrearCurso = function() {
+        var modal = document.getElementById('modal-crear-curso');
+        if (modal) modal.classList.add('hidden');
+    };
+
+    window.abrirModalEditarCurso = function(curso) {
+        var modal = document.getElementById('modal-editar-curso');
+        if (!modal || !curso) return;
+
+        document.getElementById('edit-curso-id').value = curso.id;
+        document.getElementById('edit-curso-titulo').value = curso.titulo || curso.nombre || '';
+        document.getElementById('edit-curso-categoria').value = curso.categoria || '';
+        document.getElementById('edit-curso-descripcion').value = curso.descripcion || '';
+
+        modal.classList.remove('hidden');
+    };
+
+    window.cerrarModalEditarCurso = function() {
+        var modal = document.getElementById('modal-editar-curso');
+        if (modal) modal.classList.add('hidden');
+    };
+
+    // Mantener la pestaña de Gestión de Cursos activa tras enviar
     document.addEventListener("DOMContentLoaded", function() {
         var tieneAlerta = {{ (session('success') || session('warning')) ? 'true' : 'false' }};
         if (tieneAlerta) {
-            switchAdminTab('monitoreo-empleados');
+            switchAdminTab('gestion-cursos');
         }
     });
 </script>

@@ -31,5 +31,6 @@ Route::middleware(['auth'])->group(function () {
     // Acciones del Administrador
     Route::post('/administrador/cursos/guardar', [AdministradorController::class, 'guardarCurso'])->name('administrador.cursos.guardar');
     Route::post('/administrador/asignar', [AdministradorController::class, 'asignarCurso'])->name('administrador.asignar');
+    Route::post('/administrador/cursos/actualizar', [AdministradorController::class, 'actualizarCurso'])->name('administrador.cursos.actualizar');
     Route::post('/administrador/asignar-curso', [AdministradorController::class, 'asignarCurso'])->name('admin.asignar-curso');
 });
