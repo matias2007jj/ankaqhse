@@ -67,6 +67,7 @@ i[data-lucide], svg.lucide { width: 18px; height: 18px; flex: none; }
     background: linear-gradient(135deg, var(--rojo-600), var(--naranja-500));
     box-shadow: 0 8px 16px -6px rgba(220, 38, 38, .55);
 }
+.marca-logo { display: block; height: 52px; width: auto; max-width: 220px; object-fit: contain; }
 .marca-nombre { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
 .marca-nombre b { color: var(--naranja-600); font-weight: 700; }
 

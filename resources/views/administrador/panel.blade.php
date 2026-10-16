@@ -29,7 +29,6 @@
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-neutral-200">
         <div>
             <div class="flex items-center gap-2">
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-neutral-900 text-white uppercase tracking-wider">Módulo Gestión / RRHH</span>
             </div>
             <h1 class="text-2xl font-extrabold text-neutral-900 mt-1">Panel de Control General</h1>
             <p class="text-neutral-500 text-sm">Monitorea el nivel de cumplimiento y gestiona los programas de capacitación corporativos.</p>

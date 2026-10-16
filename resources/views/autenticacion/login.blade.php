@@ -19,11 +19,11 @@
         <!-- ============ LADO IZQUIERDO: FORMULARIO ============ -->
         <section class="panel-formulario">
             <div class="marca">
-                <span class="marca-icono"><i data-lucide="flame"></i></span>
+                <img src=" {{ asset('img/logo.png') }}" alt="ANKA ACADEMY" class="marca-logo">
                 <span class="marca-nombre">ANKA<b>ACADEMY</b></span>
             </div>
 
-            <h1 class="titulo-login">Bienvenido a<br> ANKA ACADEMY<br></h1>
+            <h1 class="titulo-login">Bienvenido a ANKA ACADEMY</h1>
             <p class="subtitulo-login"></p>
 
             @if ($errors->any())
@@ -41,11 +41,11 @@
                 @csrf
 
                 <div class="campo">
-                    <label for="email">Correo corporativo</label>
+                    <label for="email">Usuario</label>
                     <div class="campo-caja">
                         <i data-lucide="mail" class="campo-icono"></i>
                         <input type="email" name="email" id="email" value="{{ old('email') }}" required
-                               autocomplete="email" placeholder="usuario@empresa.com">
+                               autocomplete="email" placeholder="">
                     </div>
                 </div>
 
@@ -54,7 +54,7 @@
                     <div class="campo-caja">
                         <i data-lucide="lock" class="campo-icono"></i>
                         <input type="password" name="password" id="password" required
-                               autocomplete="current-password" placeholder="••••••••">
+                               autocomplete="current-password" placeholder="">
                         <button type="button" class="ver-clave" id="ver-clave" aria-label="Mostrar contraseña">
                             <i data-lucide="eye" id="icono-ver"></i>
                             <i data-lucide="eye-off" id="icono-ocultar" style="display:none"></i>
@@ -62,16 +62,12 @@
                     </div>
                 </div>
 
-                <label class="recordar">
-                    <input type="checkbox" name="remember">
-                    <span>Recordar mi sesión</span>
-                </label>
-
                 <button type="submit" class="boton-principal">
                     <i data-lucide="log-in"></i> Iniciar sesión
                 </button>
             </form>
 
+        
         </section>
 
         <!-- ============ LADO DERECHO: ILUSTRACIÓN ============ -->
@@ -132,16 +128,13 @@
 
                 <!-- etiqueta -->
                 <rect x="108" y="196" width="104" height="128" rx="10" fill="#fff"/>
-                <path d="M160 208 C146 228 140 242 148 258 C153 267 167 267 172 258 C180 242 173 228 160 208 Z" fill="#F97316"/>
-                <path d="M160 232 C154 242 153 250 157 256 C160 260 165 260 167 256 C170 250 167 242 160 232 Z" fill="#FDE68A"/>
-                <text x="160" y="292" text-anchor="middle" font-family="Barlow, Arial, sans-serif" font-weight="700" font-size="20" fill="#DC2626">ANKA FIRE</text>
-                <rect x="124" y="302" width="72" height="5" rx="2.5" fill="#D4D4D4"/>
-                <rect x="134" y="312" width="52" height="5" rx="2.5" fill="#E5E5E5"/>
+                <image href="{{ asset('img/logo.png') }}" x="130" y="203" width="60" height="60" preserveAspectRatio="xMidYMid meet"/>
+                <text x="160" y="285" text-anchor="middle" font-family="Barlow, Arial, sans-serif" font-weight="700" font-size="22" letter-spacing="1" fill="#DC2626">ANKA</text>
+                <text x="160" y="308" text-anchor="middle" font-family="Barlow, Arial, sans-serif" font-weight="700" font-size="18" letter-spacing="3" fill="#EA580C">ACADEMY</text>
             </svg>
 
             <div class="chips">
                 <span class="chip"><i data-lucide="shield-check"></i> Uso correcto de extintores</span>
-                <span class="chip"><i data-lucide="users"></i> Brigadas de emergencia</span>
             </div>
 
             <p class="lema">Prepárate para actuar.<br><b>Capacítate para proteger.</b></p>
@@ -167,3 +160,4 @@
 </script>
 </body>
 </html>
+
