@@ -1,6 +1,6 @@
 @extends('plantillas.aplicacion')
 
-@section('titulo', 'Portal de Capacitaciones - CapacitaRed')
+@section('titulo', 'Portal de Capacitaciones - ANKA ACADEMY')
 
 @push('estilos')
     <link rel="stylesheet" href="{{ asset('css/capacitaciones.css') }}">
