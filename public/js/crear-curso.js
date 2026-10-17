@@ -62,7 +62,6 @@
         return el('paso-' + n).querySelectorAll('input, textarea, select');
     }
 
-    // Solo comprueba (sin mostrar tooltip)
     function pasoValido(n) {
         var lista = campos(n);
         for (var i = 0; i < lista.length; i++) {
@@ -71,7 +70,6 @@
         return true;
     }
 
-    // Muestra el tooltip del primer campo inválido del paso visible
     function validarPaso(n) {
         var lista = campos(n);
         for (var i = 0; i < lista.length; i++) {
@@ -89,10 +87,18 @@
         div.className = 'modulo-bloque border border-neutral-200 rounded-xl p-4 space-y-3 bg-neutral-50';
         div.innerHTML =
             '<span class="modulo-num text-xs font-bold text-orange-600 uppercase">Módulo ' + (i + 1) + '</span>' +
-            '<input type="text" name="modulos[' + i + '][titulo]" required maxlength="255" placeholder="Título del módulo ' + (i + 1) + '" ' +
-                'class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-orange-500">' +
             '<div>' +
-                '<label class="block text-[11px] font-bold text-neutral-500 uppercase mb-1">Video del módulo</label>' +
+                '<label class="block text-[11px] font-bold text-neutral-600 uppercase mb-1">Título del Módulo</label>' +
+                '<input type="text" name="modulos[' + i + '][titulo]" required maxlength="255" placeholder="Título del módulo ' + (i + 1) + '" ' +
+                    'class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:border-orange-500">' +
+            '</div>' +
+            '<div>' +
+                '<label class="block text-[11px] font-bold text-neutral-600 uppercase mb-1">Descripción del Módulo</label>' +
+                '<textarea name="modulos[' + i + '][descripcion]" rows="2" placeholder="Breve descripción del contenido de este módulo..." ' +
+                    'class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:border-orange-500"></textarea>' +
+            '</div>' +
+            '<div>' +
+                '<label class="block text-[11px] font-bold text-neutral-500 uppercase mb-1">Video del Módulo</label>' +
                 '<input type="file" required accept="video/mp4,video/webm,video/quicktime" ' +
                     'class="input-video w-full text-xs text-neutral-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer border border-neutral-200 rounded-xl p-1 bg-white">' +
                 '<input type="hidden" class="video-token" name="modulos[' + i + '][video_token]">' +
@@ -103,9 +109,10 @@
     }
 
     function moduloTieneContenido(bloque) {
-        var titulo = bloque.querySelector('input[type="text"]').value.trim();
-        var video = bloque.querySelector('input[type="file"]').files.length > 0;
-        return titulo !== '' || video;
+        var inputsText = bloque.querySelectorAll('input[type="text"], textarea');
+        var tieneTexto = Array.prototype.some.call(inputsText, function(input) { return input.value.trim() !== ''; });
+        var tieneVideo = bloque.querySelector('input[type="file"]').files.length > 0;
+        return tieneTexto || tieneVideo;
     }
 
     function actualizarModulos() {
@@ -118,14 +125,13 @@
 
         var actuales = cont.querySelectorAll('.modulo-bloque').length;
 
-        // Si va a quitar módulos que ya tienen datos, pedir confirmación
         if (n < actuales) {
             var bloques = cont.querySelectorAll('.modulo-bloque');
             var conDatos = false;
             for (var k = n; k < actuales; k++) {
                 if (moduloTieneContenido(bloques[k])) conDatos = true;
             }
-            if (conDatos && !window.confirm('Vas a quitar módulos que ya tienen título o video. ¿Continuar?')) {
+            if (conDatos && !window.confirm('Vas a quitar módulos que ya tienen contenido o video. ¿Continuar?')) {
                 input.value = actuales;
                 return;
             }
@@ -136,7 +142,6 @@
         while (actuales > n) { cont.removeChild(cont.lastElementChild); actuales--; }
     }
 
-    // Subir el video en segundo plano apenas se elige (con progreso)
     var subidasActivas = 0;
 
     function alElegirVideo(e) {
@@ -149,7 +154,6 @@
         var barra = bloque.querySelector('.video-barra');
         var relleno = bloque.querySelector('.video-barra-fill');
 
-        // Cancelar subida anterior de este módulo si se cambió el archivo
         if (bloque._xhr) { bloque._xhr.abort(); bloque._xhr = null; }
         token.value = '';
         estado.textContent = '';
@@ -164,7 +168,6 @@
             return;
         }
 
-        // Validar el total del curso (suma de todos los videos elegidos)
         var totalMb = 0;
         document.querySelectorAll('.input-video').forEach(function (inp) {
             if (inp.files.length) totalMb += inp.files[0].size / (1024 * 1024);
@@ -265,7 +268,6 @@
         renumerarPreguntas();
     }
 
-    // La opción marcada como correcta no puede estar vacía
     function correctasConTexto() {
         var bloques = el('contenedor-preguntas').querySelectorAll('.pregunta-bloque');
         for (var i = 0; i < bloques.length; i++) {
@@ -283,7 +285,7 @@
     // ---------- Inicio ----------
     document.addEventListener('DOMContentLoaded', function () {
         var form = el('form-crear-curso');
-        if (!form) return; // el usuario no es operador
+        if (!form) return;
 
         actualizarModulos();
         agregarPregunta();
@@ -310,14 +312,12 @@
         });
 
         form.addEventListener('submit', function (e) {
-            // Enter en pasos 1-2: avanzar en vez de enviar
             if (pasoActual < TOTAL_PASOS) {
                 e.preventDefault();
                 if (validarPaso(pasoActual)) irAPaso(pasoActual + 1);
                 return;
             }
 
-            // Paso final: revisar todos los pasos
             for (var p = 1; p <= TOTAL_PASOS; p++) {
                 if (!pasoValido(p)) {
                     e.preventDefault();
@@ -331,7 +331,6 @@
                 return;
             }
 
-            // Los videos deben haber terminado de subirse
             var sinVideo = Array.prototype.some.call(document.querySelectorAll('.video-token'), function (t) { return !t.value; });
             if (subidasActivas > 0 || sinVideo) {
                 e.preventDefault();
@@ -342,7 +341,6 @@
                 return;
             }
 
-            // Guardando (ahora es rápido: los videos ya están en el servidor)
             var btn = el('btn-guardar-curso');
             btn.disabled = true;
             btn.classList.add('opacity-60', 'cursor-not-allowed');

@@ -110,16 +110,18 @@ class AdministradorController extends Controller
         return redirect()->back()->with('success', 'Estudiante registrado correctamente.');
     }
 
+    /**
+     * Actualiza los datos de un alumno/colaborador (DNI y Contraseña opcionales)
+     */
     public function actualizarUsuario(Request $request)
     {
         $request->validate([
             'user_id'  => 'required|exists:users,id',
             'name'     => 'required|string|max:255',
-            'dni'      => 'required|string|digits:8|unique:users,dni,' . $request->user_id,
+            'dni'      => 'nullable|string|digits:8|unique:users,dni,' . $request->user_id,
             'password' => 'nullable|string|min:6',
         ], [
             'name.required' => 'El nombre completo es obligatorio.',
-            'dni.required'  => 'El DNI es obligatorio.',
             'dni.digits'    => 'El DNI debe tener exactamente 8 dígitos.',
             'dni.unique'    => 'Este DNI ya pertenece a otro usuario.',
             'password.min'  => 'La nueva contraseña debe tener al menos 6 caracteres.',
@@ -127,9 +129,13 @@ class AdministradorController extends Controller
 
         $user = User::findOrFail($request->user_id);
         $user->name = $request->name;
-        $user->dni  = $request->dni;
 
-        // Actualiza la contraseña únicamente si se envió un valor
+        // Solo actualiza el DNI si se envió un valor nuevo
+        if ($request->filled('dni')) {
+            $user->dni = trim($request->dni);
+        }
+
+        // Solo actualiza la contraseña si se envió una nueva
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
         }
@@ -137,6 +143,22 @@ class AdministradorController extends Controller
         $user->save();
 
         return redirect()->back()->with('success', 'Datos del colaborador actualizados correctamente.');
+    }
+
+    /**
+     * Elimina un alumno/colaborador y sus relaciones
+     */
+    public function eliminarUsuario(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $user = User::findOrFail($request->user_id);
+        $user->cursos()->detach();
+        $user->delete();
+
+        return redirect()->back()->with('success', 'Colaborador eliminado correctamente.');
     }
 
     public function asignarCurso(Request $request)
@@ -168,7 +190,7 @@ class AdministradorController extends Controller
         $request->validate([
             'curso_id'   => 'required|exists:cursos,id',
             'titulo'      => 'required|string|max:255',
-            'categoria'   => 'nullable|string|max:100',
+            'objetivo'    => 'nullable|string',
             'descripcion' => 'nullable|string',
             'imagen'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072',
         ]);
@@ -187,7 +209,7 @@ class AdministradorController extends Controller
         }
 
         $curso->titulo = $request->titulo;
-        if ($request->filled('categoria')) $curso->categoria = $request->categoria;
+        if ($request->filled('objetivo')) $curso->objetivo = $request->objetivo;
         $curso->descripcion = $request->descripcion;
         $curso->save();
 
@@ -319,7 +341,6 @@ class AdministradorController extends Controller
 
         $request->validate([
             'video' => 'required|file|mimetypes:video/mp4,video/webm,video/quicktime|max:1048576',
-            'video.max' => 'El video puede pesar como máximo 1 GB.',
         ]);
 
         $archivo = $request->file('video');
@@ -336,12 +357,13 @@ class AdministradorController extends Controller
         }
 
         $request->validate([
-            'titulo'      => 'required|string|max:255',
-            'categoria'   => 'required|string|max:100',
-            'descripcion' => 'nullable|string',
-            'imagen'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072',
+            'titulo'               => 'required|string|max:255',
+            'objetivo'             => 'required|string',
+            'descripcion'          => 'nullable|string',
+            'imagen'               => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072',
             'modulos'              => 'required|array|min:1|max:20',
             'modulos.*.titulo'     => 'required|string|max:255',
+            'modulos.*.descripcion'=> 'nullable|string',
             'modulos.*.video_token' => ['required', 'regex:/^[a-f0-9\-]{36}\.[a-z0-9]{2,4}$/'],
             'examen.titulo'        => 'required|string|max:255',
             'examen.nota_minima'   => 'required|integer|min:1|max:20',
@@ -351,7 +373,6 @@ class AdministradorController extends Controller
             'preguntas.*.correcta' => 'required|integer|min:0|max:3',
         ]);
 
-        // Máximo 3 GB de videos por curso
         $totalBytes = 0;
         foreach ($request->input('modulos') as $m) {
             $f = storage_path('app/tmp_videos/' . $m['video_token']);
@@ -365,24 +386,10 @@ class AdministradorController extends Controller
             ]);
         }
 
-        $preguntas = [];
-        foreach ($request->input('preguntas') as $i => $p) {
-            $opciones = [];
-            foreach (($p['opciones'] ?? []) as $indice => $texto) {
-                $texto = trim((string) $texto);
-                if ($texto !== '') $opciones[(int) $indice] = $texto;
-            }
-            $preguntas[] = [
-                'texto'    => $p['texto'],
-                'opciones' => $opciones,
-                'correcta' => (int) $p['correcta'],
-            ];
-        }
-
         $archivosGuardados = [];
 
         try {
-            DB::transaction(function () use ($request, $preguntas, &$archivosGuardados) {
+            DB::transaction(function () use ($request, &$archivosGuardados) {
                 $rutaImagen = null;
                 if ($request->hasFile('imagen')) {
                     $file = $request->file('imagen');
@@ -394,13 +401,13 @@ class AdministradorController extends Controller
 
                 $curso = Curso::create([
                     'titulo'      => $request->titulo,
-                    'categoria'   => $request->categoria,
+                    'objetivo'    => $request->objetivo,
                     'descripcion' => $request->descripcion,
                     'imagen'      => $rutaImagen,
                 ]);
 
                 $orden = 0;
-                foreach ($request->input('modulos') as $clave => $datosModulo) {
+                foreach ($request->input('modulos') as $datosModulo) {
                     $orden++;
                     $token  = $datosModulo['video_token'];
                     $origen = storage_path('app/tmp_videos/' . $token);
@@ -414,10 +421,11 @@ class AdministradorController extends Controller
                     $archivosGuardados[] = public_path($rutaVideo);
 
                     $curso->modulos()->create([
-                        'titulo'    => $datosModulo['titulo'],
-                        'video'     => $rutaVideo,
-                        'video_url' => $rutaVideo,
-                        'orden'     => $orden,
+                        'titulo'      => $datosModulo['titulo'],
+                        'descripcion' => $datosModulo['descripcion'] ?? null,
+                        'video'       => $rutaVideo,
+                        'video_url'   => $rutaVideo,
+                        'orden'       => $orden,
                     ]);
                 }
 
@@ -427,13 +435,15 @@ class AdministradorController extends Controller
                     'nota_minima' => $request->input('examen.nota_minima'),
                 ]);
 
-                foreach ($preguntas as $p) {
+                foreach ($request->input('preguntas') as $p) {
                     $pregunta = $examen->preguntas()->create(['pregunta' => $p['texto']]);
-                    foreach ($p['opciones'] as $indiceOpcion => $textoOpcion) {
-                        $pregunta->respuestas()->create([
-                            'respuesta'   => $textoOpcion,
-                            'es_correcta' => $indiceOpcion === $p['correcta'],
-                        ]);
+                    foreach (($p['opciones'] ?? []) as $indiceOpcion => $textoOpcion) {
+                        if (trim((string) $textoOpcion) !== '') {
+                            $pregunta->respuestas()->create([
+                                'respuesta'   => trim($textoOpcion),
+                                'es_correcta' => (int)$p['correcta'] === (int)$indiceOpcion,
+                            ]);
+                        }
                     }
                 }
             });
@@ -446,20 +456,5 @@ class AdministradorController extends Controller
         }
 
         return redirect()->back()->with('success', 'Curso creado exitosamente.');
-    }
-    public function eliminarUsuario(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-        ]);
-
-        $user = User::findOrFail($request->user_id);
-
-        // Opcional: Desvincular sus cursos asignados antes de borrar
-        $user->cursos()->detach();
-
-        $user->delete();
-
-        return redirect()->back()->with('success', 'Colaborador eliminado correctamente.');
     }
 }

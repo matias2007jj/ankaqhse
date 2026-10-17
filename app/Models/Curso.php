@@ -11,12 +11,7 @@ class Curso extends Model
 
     protected $table = 'cursos';
 
-    protected $fillable = [
-        'titulo',
-        'descripcion',
-        'categoria',
-        'imagen',
-    ];
+    protected $fillable = ['titulo', 'objetivo', 'descripcion', 'imagen', 'estado', 'activo'];
 
     /**
      * Relación: Un curso tiene muchos módulos

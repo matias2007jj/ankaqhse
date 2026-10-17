@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models;
+
 use Illuminate\Support\Facades\Hash;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +20,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'dni',
         'email',
         'password',
         'role',
@@ -68,10 +70,10 @@ class User extends Authenticatable
             ->withPivot('completado_el')
             ->withTimestamps();
     }
+
     public function setPasswordAttribute($value)
     {
         if (!empty($value)) {
-            // Solo aplica Hash si no está encriptada previamente
             $this->attributes['password'] = Hash::needsRehash($value) ? Hash::make($value) : $value;
         }
     }

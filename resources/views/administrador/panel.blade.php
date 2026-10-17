@@ -245,9 +245,11 @@
                         @endif
 
                         <div class="p-5 space-y-2">
-                            <div class="flex justify-between items-center">
-                                <span class="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-0.5 rounded-full">{{ $curso->categoria ?? 'General' }}</span>
-                                <div class="flex items-center gap-2">
+                            <div class="flex justify-between items-center gap-2">
+                                <span class="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-0.5 rounded-full truncate max-w-[150px]">
+                                    {{ $curso->categoria ?? 'General' }}
+                                </span>
+                                <div class="flex items-center gap-2 shrink-0">
                                     @if(in_array(strtolower(trim(Auth::user()->role ?? '')), ['operador', 'admin', 'administrador']))
                                     <button type="button"
                                         data-curso='@json($curso)' onclick="abrirModalEditarCurso(this)"
@@ -269,7 +271,14 @@
                                 </div>
                             </div>
                             <h3 class="font-bold text-neutral-800 text-base leading-snug">{{ $curso->titulo ?? $curso->nombre }}</h3>
-                            <p class="text-xs text-neutral-400">{{ $curso->modulos_count ?? 0 }} Módulos • {{ $curso->usuarios_count ?? 0 }} Colaboradores inscritos</p>
+
+                            @if(!empty($curso->objetivo))
+                                <p class="text-xs text-neutral-500 line-clamp-2" title="{{ $curso->objetivo }}">
+                                    {{ $curso->objetivo }}
+                                </p>
+                            @endif
+
+                            <p class="text-xs text-neutral-400 pt-1">{{ $curso->modulos_count ?? 0 }} Módulos • {{ $curso->usuarios_count ?? 0 }} Colaboradores inscritos</p>
                         </div>
                     </div>
 
@@ -351,8 +360,8 @@
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Número de DNI *</label>
-                <input type="text" name="dni" id="edit-user-dni" maxlength="8" pattern="[0-9]{8}" required placeholder="Ej: 71234567" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500">
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Número de DNI <span class="text-neutral-400 font-normal">(Opcional)</span></label>
+                <input type="text" name="dni" id="edit-user-dni" maxlength="8" pattern="[0-9]{8}" placeholder="Ej: 71234567" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500">
             </div>
 
             <div>
@@ -415,8 +424,8 @@
                         <input type="text" name="titulo" required placeholder="Ej: Seguridad y Salud en el Trabajo" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Categoría</label>
-                        <input type="text" name="categoria" required placeholder="Ej: Seguridad, Calidad, RRHH" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+                        <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Objetivo del Curso</label>
+                        <textarea name="objetivo" rows="3" required placeholder="Describe el objetivo principal que el estudiante alcanzará..." class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500"></textarea>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Imagen de Portada</label>
@@ -434,7 +443,7 @@
                             <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Cantidad de módulos</label>
                             <input type="number" id="cantidad-modulos" min="1" max="20" value="1" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
                         </div>
-                        <p class="text-xs text-neutral-400 pb-2">Cada módulo lleva un título y un video.</p>
+                        <p class="text-xs text-neutral-400 pb-2">Cada módulo lleva un título, descripción y video.</p>
                     </div>
                     <div id="contenedor-modulos" class="space-y-3"></div>
                 </div>
@@ -490,8 +499,8 @@
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Categoría</label>
-                <input type="text" name="categoria" id="edit-curso-categoria" required class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Objetivo del Curso</label>
+                <textarea name="objetivo" id="edit-curso-objetivo" rows="2" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500"></textarea>
             </div>
 
             <div>
@@ -536,7 +545,7 @@
                     <input type="text" name="titulo" required placeholder="Título del Módulo" class="w-full border border-neutral-200 rounded-lg p-2 text-xs bg-white">
                 </div>
                 <div>
-                    <textarea name="descripcion" rows="2" placeholder="Descripción breve..." class="w-full border border-neutral-200 rounded-lg p-2 text-xs bg-white"></textarea>
+                    <textarea name="descripcion" rows="2" placeholder="Descripción del módulo..." class="w-full border border-neutral-200 rounded-lg p-2 text-xs bg-white"></textarea>
                 </div>
                 <div>
                     <label class="block text-[10px] text-neutral-500 font-bold mb-1">Archivo de Vídeo (MP4/WebM)</label>

@@ -5,6 +5,7 @@ use App\Http\Controllers\AlumnoController;
 use App\Http\Controllers\CapacitacionController;
 use App\Http\Controllers\AdministradorController;
 use App\Http\Controllers\AutenticacionController;
+use App\Http\Controllers\CertificadoController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -46,4 +47,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/administrador/videos/subir', [AdministradorController::class, 'subirVideoTemporal'])->name('administrador.videos.subir');
     Route::post('/administrador/asignar', [AdministradorController::class, 'asignarCurso'])->name('administrador.asignar');
     Route::post('/administrador/asignar-curso', [AdministradorController::class, 'asignarCurso'])->name('admin.asignar-curso');
+
+    Route::get('/certificado/descargar/{curso_id}', [CertificadoController::class, 'descargar'])
+    ->middleware('auth')
+    ->name('certificado.descargar');
 });

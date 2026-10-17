@@ -20,25 +20,42 @@
     </a>
 
     <!-- CABECERA DEL CURSO -->
-    <div class="bg-white rounded-2xl border border-neutral-200 shadow-sm p-6 space-y-3">
-        <div class="flex items-center justify-between gap-3">
-            <span class="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-1 rounded-full">{{ $curso->categoria ?? 'Capacitación' }}</span>
-            @if($asignado)
-                @if($progreso == 100)
-                    <span class="bg-green-100 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full">✓ Aprobado</span>
-                @elseif($progreso > 0)
-                    <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">En curso</span>
+    <div class="bg-white rounded-2xl border border-neutral-200 shadow-sm p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <span class="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-1 rounded-full self-start sm:self-auto">{{ $curso->categoria ?? $curso->objetivo ?? 'Capacitación' }}</span>
+            <div class="flex items-center gap-2">
+                @if($asignado)
+                    @if($progreso == 100 || $aprobado)
+                        <span class="bg-green-100 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full">✓ Aprobado</span>
+                    @elseif($progreso > 0)
+                        <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">En curso</span>
+                    @else
+                        <span class="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">Pendiente</span>
+                    @endif
                 @else
-                    <span class="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">Pendiente</span>
+                    <span class="bg-neutral-100 text-neutral-600 text-xs font-bold px-2.5 py-1 rounded-full">Vista previa</span>
                 @endif
-            @else
-                <span class="bg-neutral-100 text-neutral-600 text-xs font-bold px-2.5 py-1 rounded-full">Vista previa</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="space-y-1">
+                <h1 class="text-2xl font-black text-neutral-900">{{ $curso->titulo }}</h1>
+                @if($curso->descripcion)
+                    <p class="text-sm text-neutral-500">{{ $curso->descripcion }}</p>
+                @endif
+            </div>
+
+            <!-- BOTÓN DESCARGAR CERTIFICADO EN CABECERA CUANDO ESTÁ APROBADO -->
+            @if($asignado && ($aprobado || $progreso == 100))
+                <div class="shrink-0">
+                    <a href="{{ route('certificado.descargar', $curso->id) }}" 
+                       class="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-xs inline-flex items-center gap-2 shadow-md transition-all">
+                        <i data-lucide="award" class="w-4 h-4"></i> Descargar Certificado PDF
+                    </a>
+                </div>
             @endif
         </div>
-        <h1 class="text-2xl font-black text-neutral-900">{{ $curso->titulo }}</h1>
-        @if($curso->descripcion)
-            <p class="text-sm text-neutral-500">{{ $curso->descripcion }}</p>
-        @endif
 
         @if($asignado)
         <div class="space-y-1.5 pt-1">
@@ -120,6 +137,9 @@
                     <div>
                         <span class="text-xs font-bold text-orange-600 uppercase">Módulo {{ $indiceActual + 1 }} de {{ $totalModulos }}</span>
                         <h2 class="text-xl font-bold text-neutral-900">{{ $moduloActual->titulo }}</h2>
+                        @if($moduloActual->descripcion)
+                            <p class="text-xs text-neutral-500 mt-1">{{ $moduloActual->descripcion }}</p>
+                        @endif
                     </div>
 
                     @if($moduloActual->video)
@@ -167,17 +187,34 @@
             @elseif($vista === 'examen' && $examen)
 
                 @if($resultado)
-                    <div class="rounded-2xl border p-5 space-y-1 {{ $resultado['aprobado'] ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800' }}">
-                        <h3 class="text-lg font-black">{{ $resultado['aprobado'] ? '¡Aprobaste la evaluación!' : 'No alcanzaste la nota mínima' }}</h3>
-                        <p class="text-sm">
-                            Nota: <strong>{{ $resultado['puntaje'] }}/20</strong> ({{ $resultado['correctas'] }} de {{ $resultado['total'] }} respuestas correctas).
-                            Nota mínima: {{ $resultado['nota_minima'] }}.
-                            @unless($resultado['aprobado']) Puedes volver a intentarlo abajo. @endunless
-                        </p>
+                    <div class="rounded-2xl border p-5 space-y-3 {{ $resultado['aprobado'] ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800' }}">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <h3 class="text-lg font-black">{{ $resultado['aprobado'] ? '¡Aprobaste la evaluación!' : 'No alcanzaste la nota mínima' }}</h3>
+                                <p class="text-sm">
+                                    Nota: <strong>{{ $resultado['puntaje'] }}/20</strong> ({{ $resultado['correctas'] }} de {{ $resultado['total'] }} respuestas correctas).
+                                    Nota mínima: {{ $resultado['nota_minima'] }}.
+                                    @unless($resultado['aprobado']) Puedes volver a intentarlo abajo. @endunless
+                                </p>
+                            </div>
+
+                            @if($resultado['aprobado'])
+                                <a href="{{ route('certificado.descargar', $curso->id) }}" 
+                                   class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-xs inline-flex items-center gap-2 shadow-md transition-all self-start sm:self-auto">
+                                    <i data-lucide="award" class="w-4 h-4"></i> Descargar Certificado
+                                </a>
+                            @endif
+                        </div>
                     </div>
                 @elseif($aprobado && $mejor)
-                    <div class="rounded-2xl border bg-green-50 border-green-200 text-green-800 p-4 text-sm font-semibold">
-                        ✓ Ya aprobaste esta evaluación (mejor nota: {{ $mejor->puntaje }}/20). Puedes volver a rendirla si quieres.
+                    <div class="rounded-2xl border bg-green-50 border-green-200 text-green-800 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold">✓ Ya aprobaste esta evaluación (mejor nota: <strong>{{ $mejor->puntaje }}/20</strong>). Puedes volver a rendirla si quieres.</p>
+                        </div>
+                        <a href="{{ route('certificado.descargar', $curso->id) }}" 
+                           class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-xs inline-flex items-center gap-2 shadow-md transition-all shrink-0">
+                            <i data-lucide="award" class="w-4 h-4"></i> Descargar Certificado
+                        </a>
                     </div>
                 @endif
 
