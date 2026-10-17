@@ -3,7 +3,7 @@
  * Paso 1: datos  ->  Paso 2: módulos + un video por módulo  ->  Paso 3: evaluación
  */
 (function () {
-    var MAX_VIDEO_MB = 200;
+    var MAX_VIDEO_MB = 1024;
     var MAX_MODULOS = 20;
     var TOTAL_PASOS = 3;
     var pasoActual = 1;
@@ -92,8 +92,11 @@
                 'class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-orange-500">' +
             '<div>' +
                 '<label class="block text-[11px] font-bold text-neutral-500 uppercase mb-1">Video del módulo</label>' +
-                '<input type="file" name="modulos[' + i + '][video]" required accept="video/mp4,video/webm,video/quicktime" ' +
+                '<input type="file" required accept="video/mp4,video/webm,video/quicktime" ' +
                     'class="input-video w-full text-xs text-neutral-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer border border-neutral-200 rounded-xl p-1 bg-white">' +
+                '<input type="hidden" class="video-token" name="modulos[' + i + '][video_token]">' +
+                '<div class="video-barra hidden h-1.5 bg-neutral-200 rounded-full mt-2 overflow-hidden"><div class="video-barra-fill h-full bg-orange-600" style="width:0%"></div></div>' +
+                '<div class="video-estado text-[11px] text-neutral-500 mt-1"></div>' +
             '</div>';
         return div;
     }
@@ -132,16 +135,77 @@
         while (actuales > n) { cont.removeChild(cont.lastElementChild); actuales--; }
     }
 
-    // Validar tamaño del video apenas se elige
+    // Subir el video en segundo plano apenas se elige (con progreso)
+    var subidasActivas = 0;
+
     function alElegirVideo(e) {
         var input = e.target;
-        if (!input.classList.contains('input-video') || !input.files.length) return;
+        if (!input.classList.contains('input-video')) return;
 
-        var mb = input.files[0].size / (1024 * 1024);
+        var bloque = input.closest('.modulo-bloque');
+        var token = bloque.querySelector('.video-token');
+        var estado = bloque.querySelector('.video-estado');
+        var barra = bloque.querySelector('.video-barra');
+        var relleno = bloque.querySelector('.video-barra-fill');
+
+        // Cancelar subida anterior de este módulo si se cambió el archivo
+        if (bloque._xhr) { bloque._xhr.abort(); bloque._xhr = null; }
+        token.value = '';
+        estado.textContent = '';
+        barra.classList.add('hidden');
+        if (!input.files.length) return;
+
+        var archivo = input.files[0];
+        var mb = archivo.size / (1024 * 1024);
         if (mb > MAX_VIDEO_MB) {
-            window.alert('El video "' + input.files[0].name + '" pesa ' + mb.toFixed(0) + ' MB. El máximo permitido es ' + MAX_VIDEO_MB + ' MB.');
+            window.alert('El video "' + archivo.name + '" pesa ' + mb.toFixed(0) + ' MB. El máximo permitido es ' + MAX_VIDEO_MB + ' MB.');
             input.value = '';
+            return;
         }
+
+        var fd = new FormData();
+        fd.append('video', archivo);
+        fd.append('_token', el('form-crear-curso').querySelector('[name="_token"]').value);
+
+        var xhr = new XMLHttpRequest();
+        bloque._xhr = xhr;
+        bloque.dataset.subiendo = '1';
+        subidasActivas++;
+        barra.classList.remove('hidden');
+        estado.textContent = 'Subiendo… 0%';
+
+        xhr.open('POST', '/administrador/videos/subir');
+        xhr.setRequestHeader('Accept', 'application/json');
+
+        xhr.upload.onprogress = function (ev) {
+            if (!ev.lengthComputable) return;
+            var pct = Math.round(ev.loaded / ev.total * 100);
+            relleno.style.width = pct + '%';
+            estado.textContent = 'Subiendo… ' + pct + '%';
+        };
+
+        function terminar() {
+            bloque.dataset.subiendo = '';
+            bloque._xhr = null;
+            subidasActivas = Math.max(0, subidasActivas - 1);
+        }
+
+        xhr.onload = function () {
+            terminar();
+            if (xhr.status === 200) {
+                token.value = JSON.parse(xhr.responseText).token;
+                relleno.style.width = '100%';
+                estado.textContent = '✔ Video listo';
+            } else {
+                var msg = 'Error al subir. Vuelve a elegir el archivo.';
+                try { msg = Object.values(JSON.parse(xhr.responseText).errors || {})[0][0] || JSON.parse(xhr.responseText).message || msg; } catch (err) {}
+                estado.textContent = '✖ ' + msg;
+                input.value = '';
+            }
+        };
+        xhr.onerror = function () { terminar(); estado.textContent = '✖ Error de red. Vuelve a elegir el archivo.'; input.value = ''; };
+        xhr.onabort = function () { terminar(); };
+        xhr.send(fd);
     }
 
     // ---------- Preguntas ----------
@@ -255,11 +319,22 @@
                 return;
             }
 
-            // Subida en curso (los videos pueden tardar)
+            // Los videos deben haber terminado de subirse
+            var sinVideo = Array.prototype.some.call(document.querySelectorAll('.video-token'), function (t) { return !t.value; });
+            if (subidasActivas > 0 || sinVideo) {
+                e.preventDefault();
+                irAPaso(2);
+                window.alert(subidasActivas > 0
+                    ? 'Aún hay videos subiéndose. Espera a que terminen.'
+                    : 'Hay módulos cuyo video no se subió correctamente.');
+                return;
+            }
+
+            // Guardando (ahora es rápido: los videos ya están en el servidor)
             var btn = el('btn-guardar-curso');
             btn.disabled = true;
             btn.classList.add('opacity-60', 'cursor-not-allowed');
-            btn.textContent = 'Subiendo videos… no cierres esta ventana';
+            btn.textContent = 'Guardando curso…';
         });
     });
 })();

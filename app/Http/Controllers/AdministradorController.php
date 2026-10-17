@@ -9,6 +9,7 @@ use App\Models\IntentoExamen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class AdministradorController extends Controller
 {
@@ -117,6 +118,30 @@ class AdministradorController extends Controller
         return redirect()->back()->with('success', 'Curso actualizado correctamente.');
     }
     /**
+     * Recibe UN video en segundo plano apenas el operador lo elige (con barra de progreso).
+     * Lo deja en una carpeta temporal y devuelve un token; al guardar el curso solo se mueve.
+     */
+    public function subirVideoTemporal(Request $request)
+    {
+        if (strtolower(trim(Auth::user()->role ?? '')) !== 'operador') {
+            return response()->json(['message' => 'No tienes permisos.'], 403);
+        }
+
+        $request->validate([
+           'video' => 'required|file|mimetypes:video/mp4,video/webm,video/quicktime|max:1048576',
+        ], [
+            'video.max' => 'El video puede pesar como máximo 1 GB.',
+            'video.uploaded' => 'No se pudo subir el video. Revisa upload_max_filesize y post_max_size de PHP.',
+        ]);
+
+        $archivo = $request->file('video');
+        $token = Str::uuid() . '.' . strtolower($archivo->extension() ?: 'mp4');
+        $archivo->move(storage_path('app/tmp_videos'), $token);
+
+        return response()->json(['token' => $token]);
+    }
+
+    /**
      * Crea un curso completo: datos, módulos (con un video cada uno) y evaluación.
      * EXCLUSIVO PARA OPERADOR
      */
@@ -137,7 +162,7 @@ class AdministradorController extends Controller
             // Módulos: cada uno con su video (máx. 200 MB por video)
             'modulos'              => 'required|array|min:1|max:20',
             'modulos.*.titulo'     => 'required|string|max:255',
-            'modulos.*.video'      => 'required|file|mimetypes:video/mp4,video/webm,video/quicktime|max:204800',
+            'modulos.*.video_token' => ['required', 'regex:/^[a-f0-9\-]{36}\.[a-z0-9]{2,4}$/'],
 
             // Evaluación
             'examen.titulo'        => 'required|string|max:255',
@@ -150,10 +175,8 @@ class AdministradorController extends Controller
         ], [
             'modulos.required'            => 'Debes agregar al menos un módulo.',
             'modulos.*.titulo.required'   => 'Cada módulo necesita un título.',
-            'modulos.*.video.required'    => 'Cada módulo necesita un video.',
-            'modulos.*.video.mimetypes'   => 'Los videos deben ser MP4, WebM o MOV.',
-            'modulos.*.video.max'         => 'Cada video puede pesar como máximo 200 MB.',
-            'modulos.*.video.uploaded'    => 'No se pudo subir un video. Revisa los límites upload_max_filesize y post_max_size de PHP.',
+            'modulos.*.video_token.required' => 'Cada módulo necesita un video (espera a que termine de subir).',
+            'modulos.*.video_token.regex'    => 'Video inválido, vuelve a subirlo.',
             'preguntas.required'          => 'La evaluación necesita al menos una pregunta.',
             'preguntas.*.texto.required'  => 'Todas las preguntas necesitan un enunciado.',
         ]);
@@ -212,11 +235,19 @@ class AdministradorController extends Controller
                 $orden = 0;
                 foreach ($request->input('modulos') as $clave => $datosModulo) {
                     $orden++;
-                    $video = $request->file("modulos.$clave.video");
+                    // El video ya fue subido en segundo plano: solo se mueve (instantáneo)
+                    $token  = $datosModulo['video_token'];
+                    $origen = storage_path('app/tmp_videos/' . $token);
+                    if (!file_exists($origen)) {
+                        throw new \RuntimeException("El video del módulo $orden no está disponible.");
+                    }
 
-                    $nombreVideo = time() . "_m" . $orden . '_' . preg_replace('/[^A-Za-z0-9\-.]/', '', $video->getClientOriginalName());
-                    $video->move(public_path('videos/cursos'), $nombreVideo);
+                    if (!is_dir(public_path('videos/cursos'))) {
+                        mkdir(public_path('videos/cursos'), 0775, true);
+                    }
+                    $nombreVideo = time() . '_m' . $orden . '_' . $token;
                     $rutaVideo = 'videos/cursos/' . $nombreVideo;
+                    rename($origen, public_path($rutaVideo));
                     $archivosGuardados[] = public_path($rutaVideo);
 
                     $curso->modulos()->create([
