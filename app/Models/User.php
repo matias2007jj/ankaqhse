@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Models;
-
+use Illuminate\Support\Facades\Hash;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -55,8 +55,8 @@ class User extends Authenticatable
     public function cursos()
     {
         return $this->belongsToMany(Curso::class, 'curso_user', 'user_id', 'curso_id')
-                    ->withPivot('progreso')
-                    ->withTimestamps();
+            ->withPivot('progreso')
+            ->withTimestamps();
     }
 
     /**
@@ -65,7 +65,14 @@ class User extends Authenticatable
     public function modulosCompletados()
     {
         return $this->belongsToMany(Modulo::class, 'modulo_usuario', 'user_id', 'modulo_id')
-                    ->withPivot('completado_el')
-                    ->withTimestamps();
+            ->withPivot('completado_el')
+            ->withTimestamps();
+    }
+    public function setPasswordAttribute($value)
+    {
+        if (!empty($value)) {
+            // Solo aplica Hash si no está encriptada previamente
+            $this->attributes['password'] = Hash::needsRehash($value) ? Hash::make($value) : $value;
+        }
     }
 }

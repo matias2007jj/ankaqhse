@@ -41,11 +41,11 @@
                 @csrf
 
                 <div class="campo">
-                    <label for="email">Correo Electrónico</label>
+                    <label for="login">DNI o Correo Electrónico</label>
                     <div class="campo-caja">
-                        <i data-lucide="mail" class="campo-icono"></i>
-                        <input type="email" name="email" id="email" value="{{ old('email') }}" required
-                               autocomplete="email" placeholder="ejemplo@anka.com">
+                        <i data-lucide="user" class="campo-icono"></i>
+                        <input type="text" name="login" id="login" value="{{ old('login') }}" required
+                               autofocus placeholder="Ingresa tu DNI o correo">
                     </div>
                 </div>
 

@@ -23,33 +23,33 @@
         </div>
     </div>
 
-    <!-- ALERTAS DE FEEDBACK EN EL PANEL -->
+    <!-- ALERTAS DE FEEDBACK -->
     @if(session('success'))
-        <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-2xl text-sm font-semibold flex items-center justify-between">
-            <span>{{ session('success') }}</span>
-            <button onclick="this.parentElement.remove()" class="text-green-600 font-bold cursor-pointer">✕</button>
-        </div>
+    <div class="p-4 bg-green-50 border border-green-200 text-green-800 rounded-2xl text-sm font-semibold flex items-center justify-between">
+        <span>{{ session('success') }}</span>
+        <button onclick="this.parentElement.remove()" class="text-green-600 font-bold cursor-pointer">✕</button>
+    </div>
     @endif
 
     @if(session('warning'))
-        <div class="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-sm font-semibold flex items-center justify-between">
-            <span>{{ session('warning') }}</span>
-            <button onclick="this.parentElement.remove()" class="text-amber-600 font-bold cursor-pointer">✕</button>
-        </div>
+    <div class="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-sm font-semibold flex items-center justify-between">
+        <span>{{ session('warning') }}</span>
+        <button onclick="this.parentElement.remove()" class="text-amber-600 font-bold cursor-pointer">✕</button>
+    </div>
     @endif
 
     @if($errors->any())
-        <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-2xl text-sm space-y-1">
-            <div class="flex items-center justify-between">
-                <strong class="font-bold">No se pudo guardar. Revisa lo siguiente:</strong>
-                <button onclick="this.closest('div.p-4').remove()" class="text-red-600 font-bold cursor-pointer">✕</button>
-            </div>
-            <ul class="list-disc pl-5 text-xs space-y-0.5">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+    <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-2xl text-sm space-y-1">
+        <div class="flex items-center justify-between">
+            <strong class="font-bold">No se pudo guardar. Revisa lo siguiente:</strong>
+            <button onclick="this.closest('div.p-4').remove()" class="text-red-600 font-bold cursor-pointer">✕</button>
         </div>
+        <ul class="list-disc pl-5 text-xs space-y-0.5">
+            @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
     @endif
 
     <!-- NAVEGACIÓN DE TABS -->
@@ -125,6 +125,9 @@
                         <h2 class="text-lg font-bold text-neutral-800">Estado de Avance de Colaboradores</h2>
                         <p class="text-xs text-neutral-500">Supervisa el progreso individual y aprueba asignaciones</p>
                     </div>
+                    <button type="button" onclick="abrirModalCrearUsuario()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer self-start sm:self-auto">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Registrar Colaborador
+                    </button>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -141,9 +144,9 @@
                         </thead>
                         <tbody class="divide-y divide-neutral-100">
                             @forelse($empleados ?? [] as $empleado)
-                                @if(in_array(strtolower(trim($empleado->role ?? '')), ['operador', 'admin', 'administrador']))
-                                    @continue
-                                @endif
+                            @if(in_array(strtolower(trim($empleado->role ?? '')), ['operador', 'admin', 'administrador']))
+                            @continue
+                            @endif
 
                             <tr class="hover:bg-neutral-50/50">
                                 <td class="p-3 flex items-center gap-3">
@@ -174,11 +177,33 @@
                                     <span class="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-xs font-bold">Pendiente</span>
                                     @endif
                                 </td>
-                                <td class="p-3 text-right">
+                                <td class="p-3 text-right flex items-center justify-end gap-2">
+                                    <!-- BOTÓN EDITAR COLABORADOR -->
                                     <button type="button"
                                         data-id="{{ $empleado->id }}"
                                         data-nombre="{{ $empleado->name ?? $empleado->nombre }}"
-                                        data-cursos='@json($empleado->cursos ? $empleado->cursos->pluck('id')->values() : [])'
+                                        data-dni="{{ $empleado->dni }}"
+                                        onclick="abrirModalEditarUsuario(this)"
+                                        class="px-2.5 py-1.5 bg-neutral-100 hover:bg-orange-100 text-neutral-600 hover:text-orange-700 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                                        title="Editar datos">
+                                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Editar
+                                    </button>
+
+                                    <!-- BOTÓN ELIMINAR COLABORADOR -->
+                                    <button type="button"
+                                        data-id="{{ $empleado->id }}"
+                                        data-nombre="{{ $empleado->name ?? $empleado->nombre }}"
+                                        onclick="abrirModalEliminarUsuario(this)"
+                                        class="px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                                        title="Eliminar colaborador">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+
+                                    <!-- BOTÓN ASIGNAR CURSO -->
+                                    <button type="button"
+                                        data-id="{{ $empleado->id }}"
+                                        data-nombre="{{ $empleado->name ?? $empleado->nombre }}"
+                                        data-cursos='@json($empleado->cursos ? $empleado->cursos->pluck("id")->values() : [])'
                                         onclick="abrirModalAsignar(this)"
                                         class="px-3 py-1.5 border border-orange-500 text-orange-600 hover:bg-orange-50 text-xs font-bold rounded-lg transition-all cursor-pointer">
                                         Asignar Curso
@@ -198,8 +223,7 @@
 
         <!-- TAB 3: GESTIÓN DE CURSOS -->
         <section id="gestion-cursos" class="tab-pane-admin space-y-4 hidden">
-            
-            <!-- BOTÓN CREAR CURSO (EXCLUSIVO OPERADOR) -->
+
             @if(strtolower(trim(Auth::user()->role ?? '')) === 'operador')
             <div class="flex justify-end">
                 <button type="button" onclick="abrirModalCrearCurso()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer">
@@ -212,28 +236,34 @@
                 @forelse($cursos ?? [] as $curso)
                 <div class="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col justify-between">
                     <div>
-                        {{-- Imagen del Curso --}}
                         @if(!empty($curso->imagen))
-                            <img src="{{ asset($curso->imagen) }}" alt="{{ $curso->titulo ?? $curso->nombre }}" class="w-full h-36 object-cover border-b border-neutral-100">
+                        <img src="{{ asset($curso->imagen) }}" alt="{{ $curso->titulo ?? $curso->nombre }}" class="w-full h-36 object-cover border-b border-neutral-100">
                         @else
-                            <div class="w-full h-36 bg-orange-50/60 border-b border-neutral-100 flex items-center justify-center text-orange-400">
-                                <i data-lucide="book-open" class="w-10 h-10"></i>
-                            </div>
+                        <div class="w-full h-36 bg-orange-50/60 border-b border-neutral-100 flex items-center justify-center text-orange-400">
+                            <i data-lucide="book-open" class="w-10 h-10"></i>
+                        </div>
                         @endif
 
                         <div class="p-5 space-y-2">
                             <div class="flex justify-between items-center">
                                 <span class="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-0.5 rounded-full">{{ $curso->categoria ?? 'General' }}</span>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xs font-semibold text-green-600">Publicado</span>
-                                    
-                                    {{-- Botón de Editar visible para roles autorizados del panel --}}
                                     @if(in_array(strtolower(trim(Auth::user()->role ?? '')), ['operador', 'admin', 'administrador']))
-                                    <button type="button" 
+                                    <button type="button"
                                         data-curso='@json($curso)' onclick="abrirModalEditarCurso(this)"
                                         class="px-2 py-1 bg-neutral-100 hover:bg-orange-100 text-neutral-600 hover:text-orange-700 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1"
                                         title="Editar Curso">
                                         <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Editar
+                                    </button>
+
+                                    <!-- BOTÓN DE ELIMINAR CURSO MEJORADO -->
+                                    <button type="button"
+                                        data-id="{{ $curso->id }}"
+                                        data-titulo="{{ $curso->titulo ?? $curso->nombre }}"
+                                        onclick="abrirModalEliminarCurso(this)"
+                                        class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                                        title="Eliminar Curso">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                     </button>
                                     @endif
                                 </div>
@@ -243,9 +273,13 @@
                         </div>
                     </div>
 
-                    <div class="p-5 pt-0">
-                        <button type="button" class="w-full py-2 bg-neutral-900 text-white text-xs font-semibold rounded-xl hover:bg-neutral-800 transition-all cursor-pointer">
-                            Gestionar Examen
+                    <!-- BOTÓN VER Y GESTIONAR MÓDULOS -->
+                    <div class="p-5 pt-0 flex gap-2">
+                        <button type="button"
+                            data-curso='@json($curso)'
+                            onclick="abrirModalVerModulos(this)"
+                            class="w-full py-2 bg-neutral-900 text-white text-xs font-bold rounded-xl hover:bg-neutral-800 transition-all cursor-pointer text-center flex items-center justify-center gap-2">
+                            <i data-lucide="video" class="w-4 h-4"></i> Ver y Gestionar Módulos
                         </button>
                     </div>
                 </div>
@@ -262,15 +296,101 @@
     </main>
 </div>
 
+<!-- MODAL REGISTRAR ESTUDIANTE -->
+<div id="modal-crear-usuario" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-md w-full p-6 shadow-xl space-y-4">
+        <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+            <h3 class="font-bold text-lg text-neutral-800 flex items-center gap-2">
+                <i data-lucide="user-plus" class="text-orange-600 w-5 h-5"></i> Registrar Nuevo Estudiante
+            </h3>
+            <button type="button" onclick="cerrarModalCrearUsuario()" class="text-neutral-400 hover:text-neutral-700 font-bold text-lg cursor-pointer">✕</button>
+        </div>
+
+        <form action="{{ route('administrador.usuarios.guardar') }}" method="POST" class="space-y-3">
+            @csrf
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Nombre Completo *</label>
+                <input type="text" name="name" required placeholder="Ej: Juan Pérez" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Número de DNI (Usuario) *</label>
+                <input type="text" name="dni" maxlength="8" pattern="[0-9]{8}" required placeholder="Ej: 71234567" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Contraseña Inicial *</label>
+                <input type="password" name="password" required placeholder="Mínimo 6 caracteres" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3">
+                <button type="button" onclick="cerrarModalCrearUsuario()" class="px-4 py-2 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold hover:bg-neutral-50">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md">Guardar Registro</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDITAR COLABORADOR -->
+<div id="modal-editar-usuario" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-md w-full p-6 shadow-xl space-y-4">
+        <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+            <h3 class="font-bold text-lg text-neutral-800 flex items-center gap-2">
+                <i data-lucide="edit-3" class="text-orange-600 w-5 h-5"></i> Editar Colaborador
+            </h3>
+            <button type="button" onclick="cerrarModalEditarUsuario()" class="text-neutral-400 hover:text-neutral-700 font-bold text-lg cursor-pointer">✕</button>
+        </div>
+
+        <form action="{{ route('administrador.usuarios.actualizar') }}" method="POST" class="space-y-3">
+            @csrf
+            <input type="hidden" name="user_id" id="edit-user-id">
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Nombre Completo *</label>
+                <input type="text" name="name" id="edit-user-name" required placeholder="Ej: Juan Pérez" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Número de DNI *</label>
+                <input type="text" name="dni" id="edit-user-dni" maxlength="8" pattern="[0-9]{8}" required placeholder="Ej: 71234567" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Nueva Contraseña <span class="text-neutral-400 font-normal">(Opcional)</span></label>
+                <input type="password" name="password" id="edit-user-password" placeholder="Dejar en blanco para conservar la actual" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3">
+                <button type="button" onclick="cerrarModalEditarUsuario()" class="px-4 py-2 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold hover:bg-neutral-50">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md">Actualizar Datos</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMAR ELIMINAR COLABORADOR -->
+<div id="modal-eliminar-usuario" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-sm w-full p-6 shadow-xl space-y-4 text-center">
+        <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-xl font-bold">⚠️</div>
+        <h3 class="font-bold text-lg text-neutral-800">¿Eliminar Colaborador?</h3>
+        <p class="text-xs text-neutral-500">Estás a punto de borrar a <strong id="eliminar-usuario-nombre"></strong>. Esta acción eliminará su acceso y registro del sistema.</p>
+
+        <form action="{{ route('administrador.usuarios.eliminar') }}" method="POST" class="flex gap-2 pt-2">
+            @csrf
+            <input type="hidden" name="user_id" id="eliminar-usuario-id">
+            <button type="button" onclick="cerrarModalEliminarUsuario()" class="flex-1 py-2 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold hover:bg-neutral-50 cursor-pointer">Cancelar</button>
+            <button type="submit" class="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer">Eliminar</button>
+        </form>
+    </div>
+</div>
+
 <!-- MODAL ASIGNAR CURSO -->
 @include('administrador.modales.asignar-curso')
 
-<!-- MODAL CREAR CURSO (EXCLUSIVO OPERADOR) : 3 pasos = Datos -> Módulos y videos -> Evaluación -->
+<!-- MODAL CREAR CURSO -->
 @if(strtolower(trim(Auth::user()->role ?? '')) === 'operador')
 <div id="modal-crear-curso" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-white rounded-2xl border border-neutral-200 max-w-3xl w-full max-h-[92vh] flex flex-col shadow-xl">
-
-        <!-- Cabecera -->
         <div class="flex justify-between items-center border-b border-neutral-100 px-6 py-4">
             <h3 class="font-bold text-lg text-neutral-800 flex items-center gap-2">
                 <i data-lucide="book-plus" class="text-orange-600 w-5 h-5"></i> Crear Nuevo Curso
@@ -278,7 +398,6 @@
             <button type="button" onclick="cerrarModalCrearCurso()" class="text-neutral-400 hover:text-neutral-700 font-bold text-lg cursor-pointer">✕</button>
         </div>
 
-        <!-- Indicador de pasos -->
         <div class="flex items-center gap-2 px-6 py-3 border-b border-neutral-100 text-xs font-bold">
             <span class="indicador-paso flex items-center gap-2" data-paso="1"><span class="w-6 h-6 rounded-full flex items-center justify-center bg-orange-600 text-white">1</span> Datos</span>
             <span class="flex-1 h-px bg-neutral-200"></span>
@@ -289,46 +408,37 @@
 
         <form id="form-crear-curso" action="{{ route('administrador.cursos.guardar') }}" method="POST" enctype="multipart/form-data" novalidate class="flex flex-col min-h-0 flex-1">
             @csrf
-
             <div id="cuerpo-crear-curso" class="overflow-y-auto px-6 py-5 flex-1">
-
-                <!-- PASO 1: DATOS GENERALES -->
                 <div id="paso-1" class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Título del Curso</label>
                         <input type="text" name="titulo" required placeholder="Ej: Seguridad y Salud en el Trabajo" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
                     </div>
-
                     <div>
                         <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Categoría</label>
                         <input type="text" name="categoria" required placeholder="Ej: Seguridad, Calidad, RRHH" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
                     </div>
-
                     <div>
                         <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Imagen de Portada</label>
-                        <input type="file" name="imagen" accept="image/*" class="w-full text-xs text-neutral-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer border border-neutral-200 rounded-xl p-1">
+                        <input type="file" name="imagen" accept="image/*" class="w-full text-xs text-neutral-500 border border-neutral-200 rounded-xl p-1">
                     </div>
-
                     <div>
                         <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Descripción</label>
                         <textarea name="descripcion" rows="3" placeholder="Breve resumen del contenido del curso..." class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500"></textarea>
                     </div>
                 </div>
 
-                <!-- PASO 2: MÓDULOS Y VIDEOS -->
                 <div id="paso-2" class="space-y-4 hidden">
                     <div class="flex items-end gap-4">
                         <div class="w-48">
                             <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Cantidad de módulos</label>
                             <input type="number" id="cantidad-modulos" min="1" max="20" value="1" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
                         </div>
-                        <p class="text-xs text-neutral-400 pb-2">Cada módulo lleva un título y un video (MP4, WebM o MOV, máx. 200 MB).</p>
+                        <p class="text-xs text-neutral-400 pb-2">Cada módulo lleva un título y un video.</p>
                     </div>
-
                     <div id="contenedor-modulos" class="space-y-3"></div>
                 </div>
 
-                <!-- PASO 3: EVALUACIÓN -->
                 <div id="paso-3" class="space-y-4 hidden">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="sm:col-span-2">
@@ -340,30 +450,19 @@
                             <input type="number" name="examen[nota_minima]" required min="1" max="20" value="14" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
                         </div>
                     </div>
-
                     <div id="contenedor-preguntas" class="space-y-4"></div>
-
-                    <button type="button" id="btn-agregar-pregunta" class="px-4 py-2 border border-orange-500 text-orange-600 hover:bg-orange-50 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2">
+                    <button type="button" id="btn-agregar-pregunta" class="px-4 py-2 border border-orange-500 text-orange-600 hover:bg-orange-50 text-xs font-bold rounded-xl transition-all flex items-center gap-2">
                         <i data-lucide="plus" class="w-4 h-4"></i> Agregar pregunta
                     </button>
                 </div>
             </div>
 
-            <!-- Botonera -->
             <div class="flex justify-between items-center gap-2 border-t border-neutral-100 px-6 py-4">
-                <button type="button" onclick="cerrarModalCrearCurso()" class="px-4 py-2 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold hover:bg-neutral-50 transition-all cursor-pointer">
-                    Cancelar
-                </button>
+                <button type="button" onclick="cerrarModalCrearCurso()" class="px-4 py-2 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold hover:bg-neutral-50">Cancelar</button>
                 <div class="flex items-center gap-2">
-                    <button type="button" id="btn-anterior" class="hidden px-4 py-2 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold hover:bg-neutral-50 transition-all cursor-pointer">
-                        ← Anterior
-                    </button>
-                    <button type="button" id="btn-siguiente" class="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer">
-                        Siguiente →
-                    </button>
-                    <button type="submit" id="btn-guardar-curso" class="hidden px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer">
-                        Guardar Curso
-                    </button>
+                    <button type="button" id="btn-anterior" class="hidden px-4 py-2 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold">← Anterior</button>
+                    <button type="button" id="btn-siguiente" class="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold">Siguiente →</button>
+                    <button type="submit" id="btn-guardar-curso" class="hidden px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md">Guardar Curso</button>
                 </div>
             </div>
         </form>
@@ -371,7 +470,7 @@
 </div>
 @endif
 
-<!-- MODAL EDITAR CURSO (DISPONIBLE EN EL DOM) -->
+<!-- MODAL EDITAR CURSO -->
 <div id="modal-editar-curso" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-white rounded-2xl border border-neutral-200 max-w-lg w-full p-6 shadow-xl space-y-5">
         <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
@@ -397,7 +496,7 @@
 
             <div>
                 <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Cambiar Imagen de Portada (Opcional)</label>
-                <input type="file" name="imagen" accept="image/*" class="w-full text-xs text-neutral-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer border border-neutral-200 rounded-xl p-1">
+                <input type="file" name="imagen" accept="image/*" class="w-full text-xs text-neutral-500 border border-neutral-200 rounded-xl p-1">
             </div>
 
             <div>
@@ -406,16 +505,110 @@
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
-                <button type="button" onclick="cerrarModalEditarCurso()" class="px-4 py-2 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold hover:bg-neutral-50 transition-all cursor-pointer">
-                    Cancelar
-                </button>
-                <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer">
-                    Actualizar Curso
-                </button>
+                <button type="button" onclick="cerrarModalEditarCurso()" class="px-4 py-2 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold hover:bg-neutral-50">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md">Actualizar Curso</button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- MODAL VER Y GESTIONAR MÓDULOS -->
+<div id="modal-ver-modulos" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-2xl w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+            <div>
+                <h3 class="font-bold text-lg text-neutral-800" id="modulos-curso-titulo">Contenido del Curso</h3>
+                <p class="text-xs text-neutral-500" id="modulos-curso-categoria"></p>
+            </div>
+            <button type="button" onclick="cerrarModalVerModulos()" class="text-neutral-400 hover:text-neutral-700 font-bold text-lg cursor-pointer">✕</button>
+        </div>
+
+        @if(strtolower(trim(Auth::user()->role ?? '')) === 'operador')
+        <div class="bg-neutral-50 p-4 rounded-xl border border-neutral-200 space-y-3">
+            <h4 class="font-bold text-xs uppercase text-orange-600 flex items-center gap-1">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir Módulo Individual
+            </h4>
+            <form action="{{ route('administrador.modulos.guardar') }}" method="POST" enctype="multipart/form-data" class="space-y-3">
+                @csrf
+                <input type="hidden" name="curso_id" id="nuevo-modulo-curso-id">
+
+                <div>
+                    <input type="text" name="titulo" required placeholder="Título del Módulo" class="w-full border border-neutral-200 rounded-lg p-2 text-xs bg-white">
+                </div>
+                <div>
+                    <textarea name="descripcion" rows="2" placeholder="Descripción breve..." class="w-full border border-neutral-200 rounded-lg p-2 text-xs bg-white"></textarea>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-neutral-500 font-bold mb-1">Archivo de Vídeo (MP4/WebM)</label>
+                    <input type="file" name="video" accept="video/*" class="w-full text-xs text-neutral-500 bg-white border border-neutral-200 rounded-lg p-1">
+                </div>
+                <button type="submit" class="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-lg shadow-sm">
+                    + Guardar Módulo
+                </button>
+            </form>
+        </div>
+        @endif
+
+        <div id="lista-modulos-container" class="space-y-3"></div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR MÓDULO -->
+<div id="modal-editar-modulo" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-md w-full p-6 shadow-xl space-y-4">
+        <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+            <h3 class="font-bold text-base text-neutral-800">Editar Módulo</h3>
+            <button type="button" onclick="cerrarModalEditarModulo()" class="text-neutral-400 hover:text-neutral-700 font-bold text-lg">✕</button>
+        </div>
+
+        <form action="{{ route('administrador.modulos.actualizar') }}" method="POST" enctype="multipart/form-data" class="space-y-3">
+            @csrf
+            <input type="hidden" name="modulo_id" id="edit-modulo-id">
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Título del Módulo</label>
+                <input type="text" name="titulo" id="edit-modulo-titulo" required class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Descripción</label>
+                <textarea name="descripcion" id="edit-modulo-descripcion" rows="2" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-xs"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Cambiar Vídeo</label>
+                <input type="file" name="video" accept="video/*" class="w-full text-xs text-neutral-500 border border-neutral-200 rounded-xl p-1">
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="cerrarModalEditarModulo()" class="px-3 py-1.5 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold">Cancelar</button>
+                <button type="submit" class="px-3 py-1.5 bg-orange-600 text-white rounded-xl text-xs font-bold shadow-md">Actualizar Módulo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMAR ELIMINAR CURSO -->
+<div id="modal-eliminar-curso" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-sm w-full p-6 shadow-xl space-y-4 text-center">
+        <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-xl font-bold">⚠️</div>
+        <h3 class="font-bold text-lg text-neutral-800">¿Eliminar Curso?</h3>
+        <p class="text-xs text-neutral-500">Estás a punto de borrar el curso <strong id="eliminar-curso-titulo"></strong> con todos sus módulos y evaluaciones. Esta acción no se puede deshacer.</p>
+
+        <form action="{{ route('administrador.cursos.eliminar') }}" method="POST" class="flex gap-2">
+            @csrf
+            <input type="hidden" name="curso_id" id="eliminar-curso-id">
+            <button type="button" onclick="cerrarModalEliminarCurso()" class="flex-1 py-2 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold">Cancelar</button>
+            <button type="submit" class="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md">Eliminar</button>
+        </form>
+    </div>
+</div>
+
+<!-- FORMULARIO OCULTO PARA ELIMINAR MÓDULO -->
+<form id="form-eliminar-modulo" action="{{ route('administrador.modulos.eliminar') }}" method="POST" class="hidden">
+    @csrf
+    <input type="hidden" name="modulo_id" id="eliminar-modulo-id">
+</form>
 
 @endsection
 
