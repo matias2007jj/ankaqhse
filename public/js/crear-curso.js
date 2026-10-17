@@ -4,6 +4,7 @@
  */
 (function () {
     var MAX_VIDEO_MB = 1024;
+    var MAX_CURSO_MB = 3072;
     var MAX_MODULOS = 20;
     var TOTAL_PASOS = 3;
     var pasoActual = 1;
@@ -159,6 +160,17 @@
         var mb = archivo.size / (1024 * 1024);
         if (mb > MAX_VIDEO_MB) {
             window.alert('El video "' + archivo.name + '" pesa ' + mb.toFixed(0) + ' MB. El máximo permitido es ' + MAX_VIDEO_MB + ' MB.');
+            input.value = '';
+            return;
+        }
+
+        // Validar el total del curso (suma de todos los videos elegidos)
+        var totalMb = 0;
+        document.querySelectorAll('.input-video').forEach(function (inp) {
+            if (inp.files.length) totalMb += inp.files[0].size / (1024 * 1024);
+        });
+        if (totalMb > MAX_CURSO_MB) {
+            window.alert('Los videos de este curso suman ' + totalMb.toFixed(0) + ' MB. El máximo por curso es 3 GB.');
             input.value = '';
             return;
         }

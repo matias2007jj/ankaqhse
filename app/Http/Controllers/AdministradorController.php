@@ -318,7 +318,8 @@ class AdministradorController extends Controller
         }
 
         $request->validate([
-            'video' => 'required|file|mimetypes:video/mp4,video/webm,video/quicktime,video/x-matroska|max:1048576',
+            'video' => 'required|file|mimetypes:video/mp4,video/webm,video/quicktime|max:1048576',
+            'video.max' => 'El video puede pesar como máximo 1 GB.',
         ]);
 
         $archivo = $request->file('video');
@@ -349,6 +350,20 @@ class AdministradorController extends Controller
             'preguntas.*.opciones' => 'required|array|min:2|max:4',
             'preguntas.*.correcta' => 'required|integer|min:0|max:3',
         ]);
+
+        // Máximo 3 GB de videos por curso
+        $totalBytes = 0;
+        foreach ($request->input('modulos') as $m) {
+            $f = storage_path('app/tmp_videos/' . $m['video_token']);
+            if (file_exists($f)) {
+                $totalBytes += filesize($f);
+            }
+        }
+        if ($totalBytes > 3 * 1024 * 1024 * 1024) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'modulos' => 'Los videos del curso superan el máximo de 3 GB.',
+            ]);
+        }
 
         $preguntas = [];
         foreach ($request->input('preguntas') as $i => $p) {
