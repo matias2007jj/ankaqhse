@@ -58,4 +58,14 @@ class User extends Authenticatable
                     ->withPivot('progreso')
                     ->withTimestamps();
     }
+
+    /**
+     * Módulos que el usuario ya completó (vio su video)
+     */
+    public function modulosCompletados()
+    {
+        return $this->belongsToMany(Modulo::class, 'modulo_usuario', 'user_id', 'modulo_id')
+                    ->withPivot('completado_el')
+                    ->withTimestamps();
+    }
 }

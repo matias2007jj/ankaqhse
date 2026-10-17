@@ -103,7 +103,7 @@
 
                     <!-- BOTÓN DE ACCIÓN -->
                     <div class="p-5 pt-0">
-                        <a href="#" class="w-full py-2.5 px-4 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-center">
+                        <a href="{{ route('alumno.curso', $curso->id) }}" class="w-full py-2.5 px-4 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-center">
                             @if($esCompletado)
                                 Repasar Contenido
                             @elseif($progreso > 0)

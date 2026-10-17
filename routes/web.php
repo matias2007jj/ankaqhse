@@ -23,6 +23,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inicio', [AlumnoController::class, 'inicio'])->name('inicio');
     Route::get('/capacitaciones', [CapacitacionController::class, 'inicio'])->name('capacitaciones.inicio');
 
+    // Contenido del curso: módulos con video y evaluación
+    Route::get('/cursos/{curso}', [AlumnoController::class, 'curso'])->name('alumno.curso');
+    Route::post('/cursos/{curso}/modulos/{modulo}/completar', [AlumnoController::class, 'completarModulo'])->name('alumno.modulo.completar');
+    Route::post('/cursos/{curso}/examen', [AlumnoController::class, 'rendirExamen'])->name('alumno.examen.rendir');
+
     // Panel de Administración (ANKA ACADEMY ADMIN)
     // Sombra de ambas URLs para prevenir errores 404 al redirigir
     Route::get('/administrador', [AdministradorController::class, 'panel'])->name('admin.panel');

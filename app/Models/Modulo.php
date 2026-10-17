@@ -14,6 +14,7 @@ class Modulo extends Model
     protected $fillable = [
         'curso_id',
         'titulo',
+        'video',
         'orden',
     ];
 

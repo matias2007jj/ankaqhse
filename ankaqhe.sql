@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 16-10-2026 a las 07:34:41
+-- Tiempo de generación: 17-10-2026 a las 02:24:36
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Base de datos: `ankaqhse`
+-- Base de datos: `ankaqhe`
 --
 
 -- --------------------------------------------------------
@@ -57,7 +57,7 @@ CREATE TABLE `cursos` (
   `categoria` varchar(255) DEFAULT NULL,
   `descripcion` text DEFAULT NULL,
   `imagen` varchar(255) DEFAULT NULL,
-  `estado` varchar(50) DEFAULT 'activo',
+  `estado` varchar(50) NOT NULL DEFAULT 'activo',
   `activo` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
@@ -68,9 +68,8 @@ CREATE TABLE `cursos` (
 --
 
 INSERT INTO `cursos` (`id`, `titulo`, `categoria`, `descripcion`, `imagen`, `estado`, `activo`, `created_at`, `updated_at`) VALUES
-(1, 'Seguridad y Salud en el Trabajo (SST)', 'Normativa Obligatoria', 'Capacitación sobre normativas básicas de prevención de riesgos laborales.', NULL, 'activo', 1, '2026-10-16 08:43:30', '2026-10-16 08:43:30'),
-(2, 'Atención al Cliente y Calidad de Servicio', 'Habilidades Blandas', 'Técnicas efectivas para la resolución de conflictos y servicio de excelencia.', NULL, 'activo', 1, '2026-10-16 08:43:30', '2026-10-16 08:43:30'),
-(3, 'SAT', 'CALIDAD', 'SAT Y SEGUROS', 'img/cursos/1792128786_awdr.jfif', 'activo', 1, '2026-10-16 10:22:17', '2026-10-16 10:33:06');
+(1, 'AEA', '123', 'dawdwad', 'img/cursos/1792195863_AbsoluteMeow.jpg', 'activo', 1, '2026-10-17 05:11:03', '2026-10-17 05:11:03'),
+(2, 'poto', '111', 'adwada', 'img/cursos/1792196556_images1.jpeg', 'activo', 1, '2026-10-17 05:22:36', '2026-10-17 05:22:36');
 
 -- --------------------------------------------------------
 
@@ -82,18 +81,18 @@ CREATE TABLE `curso_user` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `user_id` bigint(20) UNSIGNED NOT NULL,
   `curso_id` bigint(20) UNSIGNED NOT NULL,
-  `progreso` int(11) DEFAULT 0,
+  `progreso` int(11) NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
 -- Volcado de datos para la tabla `curso_user`
 --
 
 INSERT INTO `curso_user` (`id`, `user_id`, `curso_id`, `progreso`, `created_at`, `updated_at`) VALUES
-(1, 2, 1, 0, '2026-10-16 08:47:15', '2026-10-16 08:47:22'),
-(2, 2, 2, 0, '2026-10-16 08:47:29', '2026-10-16 08:47:29');
+(1, 1, 1, 50, '2026-10-17 05:11:08', '2026-10-17 05:11:50'),
+(2, 1, 2, 100, '2026-10-17 05:22:43', '2026-10-17 05:23:30');
 
 -- --------------------------------------------------------
 
@@ -109,6 +108,14 @@ CREATE TABLE `examenes` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `examenes`
+--
+
+INSERT INTO `examenes` (`id`, `curso_id`, `titulo`, `nota_minima`, `created_at`, `updated_at`) VALUES
+(1, 1, 'ad', 14, '2026-10-17 05:11:03', '2026-10-17 05:11:03'),
+(2, 2, 'wadwdwadaw', 14, '2026-10-17 05:22:36', '2026-10-17 05:22:36');
 
 -- --------------------------------------------------------
 
@@ -142,6 +149,14 @@ CREATE TABLE `intentos_examen` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `intentos_examen`
+--
+
+INSERT INTO `intentos_examen` (`id`, `user_id`, `examen_id`, `puntaje`, `aprobado`, `completado_el`, `created_at`, `updated_at`) VALUES
+(1, 1, 2, 20, 1, '2026-10-17 05:23:24', '2026-10-17 05:23:24', '2026-10-17 05:23:24'),
+(2, 1, 2, 20, 1, '2026-10-17 05:23:30', '2026-10-17 05:23:30', '2026-10-17 05:23:30');
 
 -- --------------------------------------------------------
 
@@ -234,7 +249,9 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (8, '2026_10_15_231242_create_preguntas_table', 1),
 (9, '2026_10_15_231242_create_respuestas_table', 1),
 (10, '2026_10_15_231243_create_intentos_examen_table', 1),
-(11, '2026_10_15_231243_create_leccion_usuario_table', 1);
+(11, '2026_10_15_231243_create_leccion_usuario_table', 1),
+(12, '2026_10_16_212029_add_video_to_modulos_table', 1),
+(13, '2026_10_16_223805_create_modulo_usuario_table', 1);
 
 -- --------------------------------------------------------
 
@@ -246,6 +263,7 @@ CREATE TABLE `modulos` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `curso_id` bigint(20) UNSIGNED NOT NULL,
   `titulo` varchar(255) NOT NULL,
+  `video` varchar(255) DEFAULT NULL,
   `orden` int(11) NOT NULL DEFAULT 1,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
@@ -255,10 +273,32 @@ CREATE TABLE `modulos` (
 -- Volcado de datos para la tabla `modulos`
 --
 
-INSERT INTO `modulos` (`id`, `curso_id`, `titulo`, `orden`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Módulo 1: Introducción a la SST', 1, '2026-10-16 08:43:30', '2026-10-16 08:43:30'),
-(2, 1, 'Módulo 2: Prevención de Incendios y Evacuación', 2, '2026-10-16 08:43:30', '2026-10-16 08:43:30'),
-(3, 2, 'Módulo 1: Comunicación Asertiva', 1, '2026-10-16 08:43:30', '2026-10-16 08:43:30');
+INSERT INTO `modulos` (`id`, `curso_id`, `titulo`, `video`, `orden`, `created_at`, `updated_at`) VALUES
+(1, 1, 'adwad', 'videos/cursos/1792195863_m1_TikVid.io7257727521834274090-hd.mp4', 1, '2026-10-17 05:11:03', '2026-10-17 05:11:03'),
+(2, 2, 'dawdadwad', 'videos/cursos/1792196556_m1_Download1.mp4', 1, '2026-10-17 05:22:36', '2026-10-17 05:22:36');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `modulo_usuario`
+--
+
+CREATE TABLE `modulo_usuario` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `modulo_id` bigint(20) UNSIGNED NOT NULL,
+  `completado_el` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `modulo_usuario`
+--
+
+INSERT INTO `modulo_usuario` (`id`, `user_id`, `modulo_id`, `completado_el`, `created_at`, `updated_at`) VALUES
+(1, 1, 1, '2026-10-17 05:11:50', '2026-10-17 05:11:50', '2026-10-17 05:11:50'),
+(2, 1, 2, '2026-10-17 05:23:17', '2026-10-17 05:23:17', '2026-10-17 05:23:17');
 
 -- --------------------------------------------------------
 
@@ -286,6 +326,14 @@ CREATE TABLE `preguntas` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Volcado de datos para la tabla `preguntas`
+--
+
+INSERT INTO `preguntas` (`id`, `examen_id`, `pregunta`, `created_at`, `updated_at`) VALUES
+(1, 1, 'dwad', '2026-10-17 05:11:03', '2026-10-17 05:11:03'),
+(2, 2, 'pinga', '2026-10-17 05:22:36', '2026-10-17 05:22:36');
+
 -- --------------------------------------------------------
 
 --
@@ -300,6 +348,20 @@ CREATE TABLE `respuestas` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `respuestas`
+--
+
+INSERT INTO `respuestas` (`id`, `pregunta_id`, `respuesta`, `es_correcta`, `created_at`, `updated_at`) VALUES
+(1, 1, 'ea', 1, '2026-10-17 05:11:03', '2026-10-17 05:11:03'),
+(2, 1, 'wda', 0, '2026-10-17 05:11:03', '2026-10-17 05:11:03'),
+(3, 1, 'wda', 0, '2026-10-17 05:11:03', '2026-10-17 05:11:03'),
+(4, 1, 'wad', 0, '2026-10-17 05:11:03', '2026-10-17 05:11:03'),
+(5, 2, 'este', 1, '2026-10-17 05:22:36', '2026-10-17 05:22:36'),
+(6, 2, 'dawdadwa', 0, '2026-10-17 05:22:36', '2026-10-17 05:22:36'),
+(7, 2, 'o estaaaa', 0, '2026-10-17 05:22:36', '2026-10-17 05:22:36'),
+(8, 2, 'pinga', 0, '2026-10-17 05:22:36', '2026-10-17 05:22:36');
 
 -- --------------------------------------------------------
 
@@ -321,7 +383,7 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('DN7Em964pZ8jXAyzdi1eO8dHxUxU5VFKQ6ZNHLCQ', 3, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 'YTo1OntzOjY6Il90b2tlbiI7czo0MDoiRnFpTWk2TnlPZm85Qks4MTZFenY5eHBvUWhKbWdVb0tMRXdoYzg0YSI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6NDE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9hZG1pbmlzdHJhZG9yL3BhbmVsIjtzOjU6InJvdXRlIjtzOjE5OiJhZG1pbmlzdHJhZG9yLnBhbmVsIjt9czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MztzOjE3OiJwYXNzd29yZF9oYXNoX3dlYiI7czo2NDoiNmY5OTU3OGFiMWE5OGJhZDQyODEwOWJjZWI4ZjU4MDZmYzVmMDkxODVhOGIzNTZlODk3MmFlNWVkOGVjZThmNCI7fQ==', 1792128786);
+('joro3iSe4aGSfXGYXPWmt5bhVITHaMfTNjbx7lHt', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 'YTo1OntzOjY6Il90b2tlbiI7czo0MDoidzlreXY5aEJBMVVLZnJ1RXBmdFc0aEFscGpDVDY3WW9LVTJpdWJHZCI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mzk6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9jdXJzb3MvMj9leGFtZW49MSI7czo1OiJyb3V0ZSI7czoxMjoiYWx1bW5vLmN1cnNvIjt9czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjE3OiJwYXNzd29yZF9oYXNoX3dlYiI7czo2NDoiZjkyMmM0NDBlYmE2ODgzNmM2YmNmYTE2MzEyOGZmYWYwYmEyMmZkOGRiOTU2NWFiNWRlZmZiNzgzOTQ0NmE2NSI7fQ==', 1792196611);
 
 -- --------------------------------------------------------
 
@@ -348,10 +410,9 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `email_verified_at`, `password`, `role`, `cargo`, `area`, `remember_token`, `created_at`, `updated_at`) VALUES
-(1, 'Administrador', 'admin@anka.com', NULL, '123456', 'admin', NULL, NULL, NULL, '2026-10-16 04:55:55', '2026-10-16 04:55:55'),
-(2, 'Ana Martínez', 'ana@anka.com', NULL, '$2y$12$cUQlDRSPNYP5QZ9ME17LLemXdXldSFD.7X24hfAGK2Jl/lyzj6Hsq', 'alumno', NULL, NULL, NULL, '2026-10-16 04:55:55', '2026-10-16 04:55:55'),
-(3, 'Operador Principal', 'operador@anka.com', NULL, '$2y$12$A7T4jtqFhT5uZta2FE9DnObNBmGPO3b3ziRPlVSsZ.tSa4fCW8e1e', 'operador', 'Jefe de Operaciones', 'Sistemas', NULL, '2026-10-16 09:41:44', '2026-10-16 09:41:44'),
-(4, 'Administrador RRHH', 'admin2@anka.com', NULL, '$2y$12$4RNx8kxp6y/b6SdRKzKIqulIRxSlXT6GHwMM2rX1Eh60L1/ubZl06', 'admin', 'Coordinador RRHH', 'Recursos Humanos', NULL, '2026-10-16 09:41:46', '2026-10-16 09:41:46');
+(1, 'Ana Martinez', 'ana@anka.com', NULL, '$2y$12$EkJvfoKHJhKXcBMp5fluTeiI05sV383wTuU076FoB9mWBq5ygHRr6', 'alumno', NULL, NULL, NULL, '2026-10-16 23:58:26', '2026-10-16 23:58:26'),
+(2, 'Administrador', 'admin@anka.com', NULL, '$2y$12$EkJvfoKHJhKXcBMp5fluTeiI05sV383wTuU076FoB9mWBq5ygHRr6', 'admin', NULL, NULL, NULL, '2026-10-16 23:58:26', '2026-10-16 23:58:26'),
+(3, 'Operador Principal', 'operador@anka.com', NULL, '$2y$12$EkJvfoKHJhKXcBMp5fluTeiI05sV383wTuU076FoB9mWBq5ygHRr6', 'operador', NULL, NULL, NULL, '2026-10-16 23:58:26', '2026-10-16 23:58:26');
 
 --
 -- Índices para tablas volcadas
@@ -382,7 +443,7 @@ ALTER TABLE `cursos`
 --
 ALTER TABLE `curso_user`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_curso_user_user` (`user_id`),
+  ADD UNIQUE KEY `curso_user_user_id_curso_id_unique` (`user_id`,`curso_id`),
   ADD KEY `fk_curso_user_curso` (`curso_id`);
 
 --
@@ -449,6 +510,14 @@ ALTER TABLE `modulos`
   ADD KEY `modulos_curso_id_foreign` (`curso_id`);
 
 --
+-- Indices de la tabla `modulo_usuario`
+--
+ALTER TABLE `modulo_usuario`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `modulo_usuario_user_id_modulo_id_unique` (`user_id`,`modulo_id`),
+  ADD KEY `modulo_usuario_modulo_id_foreign` (`modulo_id`);
+
+--
 -- Indices de la tabla `password_reset_tokens`
 --
 ALTER TABLE `password_reset_tokens`
@@ -491,7 +560,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT de la tabla `cursos`
 --
 ALTER TABLE `cursos`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de la tabla `curso_user`
@@ -503,7 +572,7 @@ ALTER TABLE `curso_user`
 -- AUTO_INCREMENT de la tabla `examenes`
 --
 ALTER TABLE `examenes`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de la tabla `failed_jobs`
@@ -515,7 +584,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT de la tabla `intentos_examen`
 --
 ALTER TABLE `intentos_examen`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de la tabla `jobs`
@@ -539,31 +608,37 @@ ALTER TABLE `leccion_usuario`
 -- AUTO_INCREMENT de la tabla `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT de la tabla `modulos`
 --
 ALTER TABLE `modulos`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT de la tabla `modulo_usuario`
+--
+ALTER TABLE `modulo_usuario`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de la tabla `preguntas`
 --
 ALTER TABLE `preguntas`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de la tabla `respuestas`
 --
 ALTER TABLE `respuestas`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT de la tabla `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- Restricciones para tablas volcadas
@@ -607,6 +682,13 @@ ALTER TABLE `leccion_usuario`
 --
 ALTER TABLE `modulos`
   ADD CONSTRAINT `modulos_curso_id_foreign` FOREIGN KEY (`curso_id`) REFERENCES `cursos` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `modulo_usuario`
+--
+ALTER TABLE `modulo_usuario`
+  ADD CONSTRAINT `modulo_usuario_modulo_id_foreign` FOREIGN KEY (`modulo_id`) REFERENCES `modulos` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `modulo_usuario_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Filtros para la tabla `preguntas`

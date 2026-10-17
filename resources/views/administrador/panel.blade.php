@@ -7,7 +7,7 @@
 @endpush
 
 @section('contenido')
-<div class="panel-container space-y-8">
+<div id="panel-admin" class="panel-container space-y-8" data-alerta="{{ (session('success') || session('warning') || $errors->any()) ? '1' : '0' }}">
 
     <!-- CABECERA DE TITULO -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-200 pb-5">
@@ -35,6 +35,20 @@
         <div class="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-sm font-semibold flex items-center justify-between">
             <span>{{ session('warning') }}</span>
             <button onclick="this.parentElement.remove()" class="text-amber-600 font-bold cursor-pointer">✕</button>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded-2xl text-sm space-y-1">
+            <div class="flex items-center justify-between">
+                <strong class="font-bold">No se pudo guardar. Revisa lo siguiente:</strong>
+                <button onclick="this.closest('div.p-4').remove()" class="text-red-600 font-bold cursor-pointer">✕</button>
+            </div>
+            <ul class="list-disc pl-5 text-xs space-y-0.5">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
     @endif
 
@@ -162,7 +176,10 @@
                                 </td>
                                 <td class="p-3 text-right">
                                     <button type="button"
-                                        onclick="abrirModalAsignar({{ $empleado->id }}, '{{ $empleado->name ?? $empleado->nombre }}', {{ json_encode($empleado->cursos ? $empleado->cursos->pluck('id')->toArray() : []) }})"
+                                        data-id="{{ $empleado->id }}"
+                                        data-nombre="{{ $empleado->name ?? $empleado->nombre }}"
+                                        data-cursos='@json($empleado->cursos ? $empleado->cursos->pluck('id')->values() : [])'
+                                        onclick="abrirModalAsignar(this)"
                                         class="px-3 py-1.5 border border-orange-500 text-orange-600 hover:bg-orange-50 text-xs font-bold rounded-lg transition-all cursor-pointer">
                                         Asignar Curso
                                     </button>
@@ -213,7 +230,7 @@
                                     {{-- Botón de Editar visible para roles autorizados del panel --}}
                                     @if(in_array(strtolower(trim(Auth::user()->role ?? '')), ['operador', 'admin', 'administrador']))
                                     <button type="button" 
-                                        onclick="abrirModalEditarCurso({{ json_encode($curso) }})"
+                                        data-curso='@json($curso)' onclick="abrirModalEditarCurso(this)"
                                         class="px-2 py-1 bg-neutral-100 hover:bg-orange-100 text-neutral-600 hover:text-orange-700 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1"
                                         title="Editar Curso">
                                         <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Editar
@@ -248,46 +265,106 @@
 <!-- MODAL ASIGNAR CURSO -->
 @include('administrador.modales.asignar-curso')
 
-<!-- MODAL CREAR CURSO (EXCLUSIVO OPERADOR) -->
+<!-- MODAL CREAR CURSO (EXCLUSIVO OPERADOR) : 3 pasos = Datos -> Módulos y videos -> Evaluación -->
 @if(strtolower(trim(Auth::user()->role ?? '')) === 'operador')
 <div id="modal-crear-curso" class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white rounded-2xl border border-neutral-200 max-w-lg w-full p-6 shadow-xl space-y-5">
-        <div class="flex justify-between items-center border-b border-neutral-100 pb-3">
+    <div class="bg-white rounded-2xl border border-neutral-200 max-w-3xl w-full max-h-[92vh] flex flex-col shadow-xl">
+
+        <!-- Cabecera -->
+        <div class="flex justify-between items-center border-b border-neutral-100 px-6 py-4">
             <h3 class="font-bold text-lg text-neutral-800 flex items-center gap-2">
                 <i data-lucide="book-plus" class="text-orange-600 w-5 h-5"></i> Crear Nuevo Curso
             </h3>
             <button type="button" onclick="cerrarModalCrearCurso()" class="text-neutral-400 hover:text-neutral-700 font-bold text-lg cursor-pointer">✕</button>
         </div>
 
-        <form action="{{ route('administrador.cursos.guardar') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+        <!-- Indicador de pasos -->
+        <div class="flex items-center gap-2 px-6 py-3 border-b border-neutral-100 text-xs font-bold">
+            <span class="indicador-paso flex items-center gap-2" data-paso="1"><span class="w-6 h-6 rounded-full flex items-center justify-center bg-orange-600 text-white">1</span> Datos</span>
+            <span class="flex-1 h-px bg-neutral-200"></span>
+            <span class="indicador-paso flex items-center gap-2" data-paso="2"><span class="w-6 h-6 rounded-full flex items-center justify-center bg-neutral-200 text-neutral-500">2</span> Módulos y videos</span>
+            <span class="flex-1 h-px bg-neutral-200"></span>
+            <span class="indicador-paso flex items-center gap-2" data-paso="3"><span class="w-6 h-6 rounded-full flex items-center justify-center bg-neutral-200 text-neutral-500">3</span> Evaluación</span>
+        </div>
+
+        <form id="form-crear-curso" action="{{ route('administrador.cursos.guardar') }}" method="POST" enctype="multipart/form-data" novalidate class="flex flex-col min-h-0 flex-1">
             @csrf
-            <div>
-                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Título del Curso</label>
-                <input type="text" name="titulo" required placeholder="Ej: Seguridad y Salud en el Trabajo" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+
+            <div id="cuerpo-crear-curso" class="overflow-y-auto px-6 py-5 flex-1">
+
+                <!-- PASO 1: DATOS GENERALES -->
+                <div id="paso-1" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Título del Curso</label>
+                        <input type="text" name="titulo" required placeholder="Ej: Seguridad y Salud en el Trabajo" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Categoría</label>
+                        <input type="text" name="categoria" required placeholder="Ej: Seguridad, Calidad, RRHH" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Imagen de Portada</label>
+                        <input type="file" name="imagen" accept="image/*" class="w-full text-xs text-neutral-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer border border-neutral-200 rounded-xl p-1">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Descripción</label>
+                        <textarea name="descripcion" rows="3" placeholder="Breve resumen del contenido del curso..." class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500"></textarea>
+                    </div>
+                </div>
+
+                <!-- PASO 2: MÓDULOS Y VIDEOS -->
+                <div id="paso-2" class="space-y-4 hidden">
+                    <div class="flex items-end gap-4">
+                        <div class="w-48">
+                            <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Cantidad de módulos</label>
+                            <input type="number" id="cantidad-modulos" min="1" max="20" value="1" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+                        </div>
+                        <p class="text-xs text-neutral-400 pb-2">Cada módulo lleva un título y un video (MP4, WebM o MOV, máx. 200 MB).</p>
+                    </div>
+
+                    <div id="contenedor-modulos" class="space-y-3"></div>
+                </div>
+
+                <!-- PASO 3: EVALUACIÓN -->
+                <div id="paso-3" class="space-y-4 hidden">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Título de la evaluación</label>
+                            <input type="text" name="examen[titulo]" required placeholder="Ej: Evaluación final del curso" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Nota mínima (1-20)</label>
+                            <input type="number" name="examen[nota_minima]" required min="1" max="20" value="14" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
+                        </div>
+                    </div>
+
+                    <div id="contenedor-preguntas" class="space-y-4"></div>
+
+                    <button type="button" id="btn-agregar-pregunta" class="px-4 py-2 border border-orange-500 text-orange-600 hover:bg-orange-50 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Agregar pregunta
+                    </button>
+                </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Categoría</label>
-                <input type="text" name="categoria" required placeholder="Ej: Seguridad, Calidad, RRHH" class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500">
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Imagen de Portada</label>
-                <input type="file" name="imagen" accept="image/*" class="w-full text-xs text-neutral-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer border border-neutral-200 rounded-xl p-1">
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-neutral-600 uppercase mb-1">Descripción</label>
-                <textarea name="descripcion" rows="3" placeholder="Breve resumen del contenido del curso..." class="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500"></textarea>
-            </div>
-
-            <div class="flex justify-end gap-2 pt-2">
+            <!-- Botonera -->
+            <div class="flex justify-between items-center gap-2 border-t border-neutral-100 px-6 py-4">
                 <button type="button" onclick="cerrarModalCrearCurso()" class="px-4 py-2 border border-neutral-200 text-neutral-600 rounded-xl text-xs font-bold hover:bg-neutral-50 transition-all cursor-pointer">
                     Cancelar
                 </button>
-                <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer">
-                    Guardar Curso
-                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="btn-anterior" class="hidden px-4 py-2 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold hover:bg-neutral-50 transition-all cursor-pointer">
+                        ← Anterior
+                    </button>
+                    <button type="button" id="btn-siguiente" class="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer">
+                        Siguiente →
+                    </button>
+                    <button type="submit" id="btn-guardar-curso" class="hidden px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer">
+                        Guardar Curso
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -343,106 +420,6 @@
 @endsection
 
 @push('scripts')
-<script>
-    window.switchAdminTab = function(tabId) {
-        var panes = document.querySelectorAll('.tab-pane-admin');
-        for (var i = 0; i < panes.length; i++) {
-            panes[i].classList.add('hidden');
-        }
-
-        var btns = document.querySelectorAll('.tab-admin-btn');
-        for (var j = 0; j < btns.length; j++) {
-            btns[j].classList.remove('border-orange-500', 'font-bold', 'text-orange-600');
-            btns[j].classList.add('border-transparent', 'font-medium', 'text-neutral-500');
-        }
-
-        var selectedPane = document.getElementById(tabId);
-        if (selectedPane) {
-            selectedPane.classList.remove('hidden');
-        }
-
-        var key = tabId.replace('metrica-general', 'metrica')
-            .replace('monitoreo-empleados', 'monitoreo')
-            .replace('gestion-cursos', 'cursos');
-
-        var activeBtn = document.getElementById('btn-tab-' + key);
-        if (activeBtn) {
-            activeBtn.classList.add('border-orange-500', 'font-bold', 'text-orange-600');
-            activeBtn.classList.remove('border-transparent', 'font-medium', 'text-neutral-500');
-        }
-    };
-
-    window.abrirModalAsignar = function(userId, userName, cursosAsignados) {
-        cursosAsignados = cursosAsignados || [];
-        
-        var inputId = document.getElementById('modal-user-id');
-        var inputName = document.getElementById('modal-user-name');
-        var modal = document.getElementById('modal-asignar-curso');
-        var selectCurso = document.getElementById('modal-curso-id');
-
-        if (inputId) inputId.value = userId;
-        if (inputName) inputName.value = userName;
-
-        if (selectCurso) {
-            selectCurso.value = "";
-
-            var options = selectCurso.querySelectorAll('option');
-            options.forEach(function(option) {
-                if (!option.value) return;
-
-                var cursoId = parseInt(option.value);
-
-                if (Array.isArray(cursosAsignados) && cursosAsignados.includes(cursoId)) {
-                    option.style.display = 'none';
-                    option.disabled = true;
-                } else {
-                    option.style.display = 'block';
-                    option.disabled = false;
-                }
-            });
-        }
-
-        if (modal) modal.classList.remove('hidden');
-    };
-
-    window.cerrarModalAsignar = function() {
-        var modal = document.getElementById('modal-asignar-curso');
-        if (modal) modal.classList.add('hidden');
-    };
-
-    window.abrirModalCrearCurso = function() {
-        var modal = document.getElementById('modal-crear-curso');
-        if (modal) modal.classList.remove('hidden');
-    };
-
-    window.cerrarModalCrearCurso = function() {
-        var modal = document.getElementById('modal-crear-curso');
-        if (modal) modal.classList.add('hidden');
-    };
-
-    window.abrirModalEditarCurso = function(curso) {
-        var modal = document.getElementById('modal-editar-curso');
-        if (!modal || !curso) return;
-
-        document.getElementById('edit-curso-id').value = curso.id;
-        document.getElementById('edit-curso-titulo').value = curso.titulo || curso.nombre || '';
-        document.getElementById('edit-curso-categoria').value = curso.categoria || '';
-        document.getElementById('edit-curso-descripcion').value = curso.descripcion || '';
-
-        modal.classList.remove('hidden');
-    };
-
-    window.cerrarModalEditarCurso = function() {
-        var modal = document.getElementById('modal-editar-curso');
-        if (modal) modal.classList.add('hidden');
-    };
-
-    // Mantener la pestaña de Gestión de Cursos activa tras enviar
-    document.addEventListener("DOMContentLoaded", function() {
-        var tieneAlerta = {{ (session('success') || session('warning')) ? 'true' : 'false' }};
-        if (tieneAlerta) {
-            switchAdminTab('gestion-cursos');
-        }
-    });
-</script>
+<script src="{{ asset('js/crear-curso.js') }}"></script>
+<script src="{{ asset('js/panel-admin.js') }}"></script>
 @endpush
